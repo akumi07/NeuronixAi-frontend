@@ -1,0 +1,119 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { authApi } from '../api/authApi'
+import { readTokenExpiryMs } from '../api/jwtExpiry'
+
+/**
+ * Session state lives in memory only: the backend issues a 24h bearer JWT with no refresh endpoint,
+ * and we deliberately do not persist it to localStorage/sessionStorage. A full page reload therefore
+ * signs the user out (documented trade-off; see docs/AUTHENTICATION.md).
+ *
+ * The password-reset credential is held separately and never placed in a URL.
+ */
+interface Session {
+  token: string
+  email: string
+}
+
+interface AuthContextValue {
+  email: string | null
+  isAuthenticated: boolean
+  /** True when the last sign-out was caused by token expiry. */
+  sessionExpired: boolean
+  login: (email: string, password: string) => Promise<void>
+  register: (email: string, password: string) => Promise<void>
+  logout: () => Promise<void>
+  clearSessionExpired: () => void
+  /** Starts a reset; the returned credential is stored in memory for the reset step. */
+  requestPasswordReset: (email: string) => Promise<void>
+  hasResetSession: boolean
+  completePasswordReset: (newPassword: string) => Promise<void>
+  discardResetSession: () => void
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null)
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null)
+  const [sessionExpired, setSessionExpired] = useState(false)
+  const [resetToken, setResetToken] = useState<string | null>(null)
+
+  const login = useCallback(async (email: string, password: string) => {
+    const { accessToken } = await authApi.login(email, password)
+    setSessionExpired(false)
+    setSession({ token: accessToken, email })
+  }, [])
+
+  const register = useCallback(async (email: string, password: string) => {
+    const { accessToken } = await authApi.register(email, password)
+    setSessionExpired(false)
+    setSession({ token: accessToken, email })
+  }, [])
+
+  const logout = useCallback(async () => {
+    const current = session
+    setSession(null) // always sign out locally, even if the network call fails
+    setSessionExpired(false)
+    if (current) {
+      try {
+        await authApi.logout(current.token)
+      } catch {
+        /* best effort: the token expires on its own */
+      }
+    }
+  }, [session])
+
+  const requestPasswordReset = useCallback(async (email: string) => {
+    const { accessToken } = await authApi.forgetPassword(email)
+    setResetToken(accessToken)
+  }, [])
+
+  const completePasswordReset = useCallback(
+    async (newPassword: string) => {
+      if (!resetToken) throw new Error('no reset session')
+      await authApi.newPassword(resetToken, newPassword)
+      setResetToken(null)
+    },
+    [resetToken],
+  )
+
+  const discardResetSession = useCallback(() => setResetToken(null), [])
+  const clearSessionExpired = useCallback(() => setSessionExpired(false), [])
+
+  // Sign out when the token's own expiry passes so the UI never pretends to be signed in.
+  useEffect(() => {
+    if (!session) return
+    const expiresAt = readTokenExpiryMs(session.token)
+    if (!expiresAt) return
+    const delay = Math.min(Math.max(expiresAt - Date.now(), 0), 2 ** 31 - 1)
+    const id = window.setTimeout(() => {
+      setSession(null)
+      setSessionExpired(true)
+    }, delay)
+    return () => window.clearTimeout(id)
+  }, [session])
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      email: session?.email ?? null,
+      isAuthenticated: session !== null,
+      sessionExpired,
+      login,
+      register,
+      logout,
+      clearSessionExpired,
+      requestPasswordReset,
+      hasResetSession: resetToken !== null,
+      completePasswordReset,
+      discardResetSession,
+    }),
+    [session, sessionExpired, resetToken, login, register, logout, clearSessionExpired, requestPasswordReset, completePasswordReset, discardResetSession],
+  )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
+  return ctx
+}
