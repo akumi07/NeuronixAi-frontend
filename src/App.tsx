@@ -13,6 +13,8 @@ import ConversationsRoute from './features/conversations/pages/ConversationsRout
 import KnowledgeRoute from './features/knowledge/pages/KnowledgeRoute'
 import SettingsRoute from './features/settings/pages/SettingsRoute'
 import LandingPage from './features/landing/pages/LandingPage'
+import RegisterVerifyPage from './features/auth/pages/RegisterVerifyPage'
+import ForgotVerifyPage from './features/auth/pages/ForgotVerifyPage'
 import ComingSoonPage from './pages/ComingSoonPage'
 import DashboardRoute from './features/dashboard/pages/DashboardRoute'
 
@@ -22,8 +24,10 @@ export default function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<RedirectIfAuthenticated><LoginPage /></RedirectIfAuthenticated>} />
       <Route path="/register" element={<RedirectIfAuthenticated><RegisterPage /></RedirectIfAuthenticated>} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/register/verify" element={<RedirectIfAuthenticated><RegisterVerifyPage /></RedirectIfAuthenticated>} />
+      <Route path="/forgot-password" element={<RedirectIfAuthenticated><ForgotPasswordPage /></RedirectIfAuthenticated>} />
+      <Route path="/forgot-password/verify" element={<RedirectIfAuthenticated><ForgotVerifyPage /></RedirectIfAuthenticated>} />
+      <Route path="/reset-password" element={<RedirectIfAuthenticated><ResetPasswordPage /></RedirectIfAuthenticated>} />
       <Route path="/app" element={<RequireAuth><DashboardRoute /></RequireAuth>} />
       <Route path="/app/workspace/:conversationId?" element={<RequireAuth><WorkspaceRoute /></RequireAuth>} />
       <Route path="/app/tasks/:taskId?" element={<RequireAuth><TasksRoute /></RequireAuth>} />

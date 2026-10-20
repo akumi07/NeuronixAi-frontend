@@ -23,4 +23,21 @@ describe('MessageContent safety', () => {
     expect(out).not.toMatch(/<[^>]*\b(href|onclick)=/) // only escaped text may mention them, never a real attribute
   })
   it('handles an unclosed code fence', () => expect(html('```js\nconst a = 1')).toContain('const a = 1'))
+  it('renders http(s) links safely and ignores other schemes', () => {
+    const ok = html('See [docs](https://example.com/a?b=1)')
+    expect(ok).toContain('href="https://example.com/a?b=1"')
+    expect(ok).toContain('rel="noopener noreferrer nofollow"')
+    const bad = html('[x](javascript:alert(1)) and [y](data:text/html,hi)')
+    expect(bad).not.toContain('<a ')
+  })
+  it('renders headings, lists, bold, italics and quotes as elements', () => {
+    const out = html('# Title\n\n- one\n- **two**\n\n1. first\n2. second\n\n> quoted *text*')
+    expect(out).toContain('role="heading"')
+    expect(out).toContain('<ul')
+    expect(out).toContain('<strong>two</strong>')
+    expect(out).toContain('<ol')
+    expect(out).toContain('<blockquote')
+    expect(out).toContain('<em>text</em>')
+  })
+  it('shows a note for empty assistant content', () => expect(html('   ')).toContain('empty response'))
 })

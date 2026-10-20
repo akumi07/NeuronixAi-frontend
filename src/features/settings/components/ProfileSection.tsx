@@ -1,7 +1,7 @@
 import { formatDay } from '../../dashboard/data/formatDate'
-import { ErrorNotice, Skeleton } from '../../dashboard/components/StateViews'
+import { ErrorNotice, InDevelopmentNotice, Skeleton } from '../../dashboard/components/StateViews'
 import { useCurrentUser } from '../../dashboard/hooks/useCurrentUser'
-import { Row, SettingsSection, Unavailable } from './SettingsParts'
+import { Row, SettingsSection } from './SettingsParts'
 
 export function ProfileSection() {
   const { me, retry } = useCurrentUser()
@@ -15,7 +15,7 @@ export function ProfileSection() {
           <Row label="Member since">{formatDay(me.data.createdAt) || 'Unknown'}</Row>
         </dl>
       )}
-      <Unavailable>Profile editing isn’t available: the backend exposes no endpoint for changing your email or other details.</Unavailable>
+      <InDevelopmentNotice compact message="Editing your profile is still in development: the backend has no endpoint for changing your details yet." />
     </SettingsSection>
   )
 }

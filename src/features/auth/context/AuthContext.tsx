@@ -1,8 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { authApi } from '../api/authApi'
-import { ApiError, apiRequest, type HttpMethod } from '../api/httpClient'
+import { ApiError, apiRequest, apiUpload, type HttpMethod } from '../api/httpClient'
 import { readTokenExpiryMs } from '../api/jwtExpiry'
 import { clearHandoffDraft } from '../../../lib/handoffDraft'
+import { clearHeldExecution } from '../../../lib/executionHandoff'
+import { clearSelectedDocuments } from '../../../lib/documentSelection'
+import { clearAllAvailability } from '../../../api/availability'
+
+/** Everything private or session-specific that lives outside React state. */
+const clearPrivateMemory = () => { clearHandoffDraft(); clearHeldExecution(); clearSelectedDocuments(); clearAllAvailability() }
 
 /**
  * Session state lives in memory only: the backend issues a 24h bearer JWT with no refresh endpoint,
@@ -19,25 +25,31 @@ interface Session {
 export type AuthedRequest = <T>(
   method: HttpMethod,
   path: string,
-  options?: { body?: unknown; timeoutMs?: number; signal?: AbortSignal },
+  options?: { body?: unknown; timeoutMs?: number; signal?: AbortSignal; query?: Record<string, string | number | undefined> },
 ) => Promise<T>
 
+export type RegisterOutcome =
+  | { kind: 'signedIn' }
+  | { kind: 'pendingVerification'; maskedEmail?: string; resendAvailableInSeconds?: number }
+
+export type AuthedUpload = <T>(path: string, form: FormData, options?: { signal?: AbortSignal; onProgress?: (fraction: number) => void; timeoutMs?: number }) => Promise<T>
+
 interface AuthContextValue {
-  /** Sends a request with the in-memory bearer token. A 401 signs the user out (expired/revoked session). */
+  /** Multipart upload with progress; same session handling as authedRequest. */
+  authedUpload: AuthedUpload
+  /** Sends a request with the in-memory bearer token. A 401 signs the user out only if the token is truly rejected. */
   authedRequest: AuthedRequest
   email: string | null
   isAuthenticated: boolean
   /** True when the last sign-out was caused by token expiry. */
   sessionExpired: boolean
   login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string) => Promise<void>
+  /** Current backend: signs in immediately. OTP-enabled backend: returns pendingVerification and creates no session. */
+  register: (email: string, password: string) => Promise<RegisterOutcome>
+  /** Adopts an access token issued by the backend after a verified flow (e.g. OTP registration). */
+  startSession: (email: string, accessToken: string) => void
   logout: () => Promise<void>
   clearSessionExpired: () => void
-  /** Starts a reset; the returned credential is stored in memory for the reset step. */
-  requestPasswordReset: (email: string) => Promise<void>
-  hasResetSession: boolean
-  completePasswordReset: (newPassword: string) => Promise<void>
-  discardResetSession: () => void
 }
 
 const SESSION_PROBE_PATH = '/api/v1/users/me'
@@ -47,7 +59,6 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [sessionExpired, setSessionExpired] = useState(false)
-  const [resetToken, setResetToken] = useState<string | null>(null)
 
   const login = useCallback(async (email: string, password: string) => {
     const { accessToken } = await authApi.login(email, password)
@@ -55,8 +66,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession({ token: accessToken, email })
   }, [])
 
-  const register = useCallback(async (email: string, password: string) => {
-    const { accessToken } = await authApi.register(email, password)
+  const register = useCallback(async (email: string, password: string): Promise<RegisterOutcome> => {
+    const res = await authApi.register(email, password)
+    if ('accessToken' in res) {
+      setSessionExpired(false)
+      setSession({ token: res.accessToken, email })
+      return { kind: 'signedIn' }
+    }
+    return { kind: 'pendingVerification', maskedEmail: res.maskedEmail, resendAvailableInSeconds: res.resendAvailableInSeconds }
+  }, [])
+
+  const startSession = useCallback((email: string, accessToken: string) => {
     setSessionExpired(false)
     setSession({ token: accessToken, email })
   }, [])
@@ -65,8 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const current = session
     setSession(null) // always sign out locally, even if the network call fails
     setSessionExpired(false)
-    setResetToken(null)
-    clearHandoffDraft()
+    clearPrivateMemory()
     if (current) {
       try {
         await authApi.logout(current.token)
@@ -78,46 +97,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * A 401 does not always mean the session ended: with Spring Security's secured /error dispatch, ordinary
-   * server-side failures (e.g. a rejected or oversized upload, a storage error) can surface as 401. So on a 401
+   * server-side failures (e.g. a rejected or oversized upload, a storage error, a missing route) can surface as 401. So on a 401
    * we ask the backend whether the token is still accepted (GET /users/me) and only sign out if it is not.
    */
-  const authedRequest = useCallback<AuthedRequest>(
-    async (method, path, options) => {
+  const guarded = useCallback(
+    async <T,>(run: (token: string) => Promise<T>): Promise<T> => {
       if (!session) throw new ApiError('http', 401)
       const is401 = (e: unknown) => e instanceof ApiError && e.kind === 'http' && e.status === 401
-      const endSession = () => { setSession(null); setResetToken(null); clearHandoffDraft(); setSessionExpired(true) }
+      const endSession = () => { setSession(null); clearPrivateMemory(); setSessionExpired(true) }
       try {
-        return await apiRequest(method, path, { ...options, bearer: session.token })
+        return await run(session.token)
       } catch (e) {
         if (!is401(e)) throw e
-        if (path === SESSION_PROBE_PATH) { endSession(); throw e }
+        if (e instanceof ApiError && e.sessionValid) throw e
         try {
           await apiRequest('GET', SESSION_PROBE_PATH, { bearer: session.token })
         } catch (probeError) {
           if (is401(probeError)) { endSession(); throw e }
-          throw new ApiError('http', 500) // couldn't verify the session; don't sign out on a guess
+          throw new ApiError('network') // couldn't verify the session; don't sign out on a guess
         }
-        throw new ApiError('http', 500) // token is still valid: the 401 masked a server-side failure
+        // The token is still valid, so this 401 did not come from the session (Spring masks server errors and missing routes as 401).
+        throw new ApiError('http', 401, { code: (e as ApiError).code, sessionValid: true })
       }
     },
     [session],
   )
 
-  const requestPasswordReset = useCallback(async (email: string) => {
-    const { accessToken } = await authApi.forgetPassword(email)
-    setResetToken(accessToken)
-  }, [])
-
-  const completePasswordReset = useCallback(
-    async (newPassword: string) => {
-      if (!resetToken) throw new Error('no reset session')
-      await authApi.newPassword(resetToken, newPassword)
-      setResetToken(null)
-    },
-    [resetToken],
+  const authedRequest = useCallback<AuthedRequest>(
+    (method, path, options) => guarded((token) => apiRequest(method, path, { ...options, bearer: token })),
+    [guarded],
+  )
+  // The probe itself must not recurse: a 401 on /users/me means the session is really invalid.
+  const authedUpload = useCallback<AuthedUpload>(
+    (path, form, options) => guarded((token) => apiUpload(path, form, { ...options, bearer: token })),
+    [guarded],
   )
 
-  const discardResetSession = useCallback(() => setResetToken(null), [])
   const clearSessionExpired = useCallback(() => setSessionExpired(false), [])
 
   // Sign out when the token's own expiry passes so the UI never pretends to be signed in.
@@ -128,8 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const delay = Math.min(Math.max(expiresAt - Date.now(), 0), 2 ** 31 - 1)
     const id = window.setTimeout(() => {
       setSession(null)
-      setResetToken(null)
-      clearHandoffDraft()
+        clearPrivateMemory()
       setSessionExpired(true)
     }, delay)
     return () => window.clearTimeout(id)
@@ -138,19 +152,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       authedRequest,
+      authedUpload,
       email: session?.email ?? null,
       isAuthenticated: session !== null,
       sessionExpired,
       login,
       register,
+      startSession,
       logout,
       clearSessionExpired,
-      requestPasswordReset,
-      hasResetSession: resetToken !== null,
-      completePasswordReset,
-      discardResetSession,
     }),
-    [authedRequest, session, sessionExpired, resetToken, login, register, logout, clearSessionExpired, requestPasswordReset, completePasswordReset, discardResetSession],
+    [authedRequest, authedUpload, session, sessionExpired, login, register, startSession, logout, clearSessionExpired],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

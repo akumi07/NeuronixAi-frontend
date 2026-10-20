@@ -40,3 +40,41 @@ describe('apiRequest', () => {
     expect(await apiRequest('POST', '/x')).toBe('Logged out successfully')
   })
 })
+
+describe('apiRequest error and retry behaviour', () => {
+  it('keeps only a stable error code from JSON error bodies and drops prose', async () => {
+    stub(async () => new Response(JSON.stringify({ code: 'DOCUMENT_NOT_FOUND', message: 'java.lang.NullPointerException at com.x', trace: 'secret' }), { status: 404 }))
+    const err = (await apiRequest('GET', '/x').catch((e: unknown) => e)) as ApiError
+    expect(err.status).toBe(404)
+    expect(err.code).toBe('DOCUMENT_NOT_FOUND')
+    expect(JSON.stringify(err)).not.toContain('NullPointer')
+  })
+  it('ignores malformed codes and non-JSON error bodies', async () => {
+    stub(async () => new Response('<html>Whitelabel Error Page</html>', { status: 500 }))
+    const err = (await apiRequest('POST', '/x').catch((e: unknown) => e)) as ApiError
+    expect(err.code).toBeUndefined()
+    stub(async () => new Response(JSON.stringify({ code: 'bad code!' }), { status: 400 }))
+    expect(((await apiRequest('POST', '/x').catch((e: unknown) => e)) as ApiError).code).toBeUndefined()
+  })
+  it('reads Retry-After on 429', async () => {
+    stub(async () => new Response('{}', { status: 429, headers: { 'Retry-After': '30' } }))
+    expect(((await apiRequest('POST', '/x').catch((e: unknown) => e)) as ApiError).retryAfterSeconds).toBe(30)
+  })
+  it('retries idempotent GETs on 503 and then succeeds', async () => {
+    let n = 0
+    const f = stub(async () => (++n < 3 ? new Response('', { status: 503 }) : new Response('{"ok":1}')))
+    expect(await apiRequest('GET', '/x')).toEqual({ ok: 1 })
+    expect(f).toHaveBeenCalledTimes(3)
+  })
+  it('never retries writes', async () => {
+    const f = stub(async () => new Response('', { status: 503 }))
+    await apiRequest('POST', '/x').catch(() => undefined)
+    expect(f).toHaveBeenCalledTimes(1)
+  })
+  it('appends query parameters without leaking them into errors', async () => {
+    const f = stub(async () => new Response('', { status: 500 }))
+    const err = (await apiRequest('GET', '/ask', { query: { question: 'secret question', topK: 5 } }).catch((e: unknown) => e)) as ApiError
+    expect(f.mock.calls[0][0]).toContain('question=secret+question')
+    expect(err.message).toBe('HTTP 500')
+  })
+})

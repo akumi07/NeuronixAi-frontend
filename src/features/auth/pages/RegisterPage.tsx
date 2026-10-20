@@ -1,15 +1,19 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { AuthShell } from '../components/AuthShell'
 import { FormAlert, PasswordField, SubmitButton, TextField } from '../components/FormControls'
 import { describeAuthFailure, type AuthFailure } from '../api/authErrors'
 import { useAuth } from '../context/AuthContext'
+import { useAuthFlow } from '../flow/AuthFlowContext'
+import { maskEmail } from '../otp/otp'
 import { registerSchema, type RegisterValues } from '../schemas'
 
 export default function RegisterPage() {
   const { register: signUp } = useAuth()
+  const { setRegistration } = useAuthFlow()
+  const navigate = useNavigate()
   const [failure, setFailure] = useState<AuthFailure | null>(null)
   const {
     register,
@@ -21,7 +25,12 @@ export default function RegisterPage() {
   const onSubmit = handleSubmit(async ({ email, password }) => {
     setFailure(null)
     try {
-      await signUp(email, password)
+      const outcome = await signUp(email, password)
+      // signedIn: the current backend issues a token immediately; the guest-only route then redirects to the dashboard.
+      if (outcome.kind === 'pendingVerification') {
+        setRegistration({ email, maskedEmail: outcome.maskedEmail ?? maskEmail(email), resendAfterSeconds: outcome.resendAvailableInSeconds })
+        navigate('/register/verify')
+      }
     } catch (e) {
       setFailure(describeAuthFailure(e, 'register'))
       resetField('password')

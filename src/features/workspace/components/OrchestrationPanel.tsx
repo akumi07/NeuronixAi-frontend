@@ -1,6 +1,8 @@
 import { useId, useState } from 'react'
 import { AgentOrchestrationVisual } from '../../landing/components/AgentOrchestrationVisual'
 import type { RunPhase } from '../hooks/useTaskSession'
+import type { ExecutionsApi } from '../hooks/useExecutions'
+import { ExecutionUnavailable, ExecutionView } from './ExecutionView'
 import { RunPipeline } from './RunPipeline'
 
 interface Props {
@@ -8,10 +10,11 @@ interface Props {
   hasConversation: boolean
   durationMs: number | null
   messageCount: number
+  tracker: ExecutionsApi
 }
 
 /** Two clearly separated views: what actually happened, and an illustrative concept of orchestration. */
-export function OrchestrationPanel({ phase, hasConversation, durationMs, messageCount }: Props) {
+export function OrchestrationPanel({ phase, hasConversation, durationMs, messageCount, tracker }: Props) {
   const [tab, setTab] = useState<'run' | 'concept'>('run')
   const id = useId()
   const tabCls = (active: boolean) =>
@@ -26,7 +29,14 @@ export function OrchestrationPanel({ phase, hasConversation, durationMs, message
 
       {tab === 'run' ? (
         <div role="tabpanel" id={`${id}-run-p`} aria-labelledby={`${id}-run`} className="mt-5">
-          <RunPipeline phase={phase} hasConversation={hasConversation} durationMs={durationMs} />
+          {tracker.latest || tracker.loading || tracker.failure ? (
+            <ExecutionView tracker={tracker} />
+          ) : (
+            <div className="space-y-4">
+              <RunPipeline phase={phase} hasConversation={hasConversation} durationMs={durationMs} />
+              {tracker.unavailable && <ExecutionUnavailable tracker={tracker} />}
+            </div>
+          )}
           <dl className="mt-6 grid grid-cols-2 gap-3 border-t border-line pt-4 text-sm">
             <div><dt className="text-xs uppercase tracking-wider text-muted">Messages</dt><dd className="font-semibold">{messageCount}</dd></div>
             <div><dt className="text-xs uppercase tracking-wider text-muted">Documents</dt><dd className="font-semibold text-muted">Not connected</dd></div>

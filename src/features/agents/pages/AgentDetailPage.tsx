@@ -61,7 +61,7 @@ export default function AgentDetailPage() {
             <p className="mt-2 max-w-2xl text-lg text-muted">{agent.description}</p>
             <p className="mt-1 text-muted">{tagline}</p>
           </div>
-          <StatusPill availability={availability} />
+          <div className="flex flex-col items-end gap-2"><span className="rounded-full border border-dashed border-muted/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">Informational profile</span><StatusPill availability={availability} /></div>
         </div>
         <p className="relative mt-5 text-sm text-muted">{AVAILABILITY_LABEL[availability].detail}</p>
       </header>
@@ -99,7 +99,7 @@ export default function AgentDetailPage() {
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-xs text-muted">Opens the workspace with the prompt filled in. Nothing is sent until you submit it.</p>
+            <p className="mt-3 text-xs text-muted">Opens the workspace with the prompt filled in. Nothing is sent until you submit it, and the example does not select this agent: the backend decides how a request is handled.</p>
           </Section>
 
           <Section title="Explore other capabilities">
