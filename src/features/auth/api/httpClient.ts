@@ -6,7 +6,7 @@
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 const TIMEOUT_MS = 15_000
 
-export type ApiErrorKind = 'network' | 'timeout' | 'http'
+export type ApiErrorKind = 'network' | 'timeout' | 'aborted' | 'http'
 
 export class ApiError extends Error {
   readonly kind: ApiErrorKind
@@ -21,9 +21,15 @@ export class ApiError extends Error {
 interface RequestOptions {
   body?: unknown
   bearer?: string
+  /** Defaults to 15s; long-running calls (LLM chat) pass a larger value. */
+  timeoutMs?: number
+  /** Lets callers cancel (e.g. on unmount or sign-out). */
+  signal?: AbortSignal
 }
 
-export async function apiRequest<T>(method: 'GET' | 'POST', path: string, { body, bearer }: RequestOptions = {}): Promise<T> {
+export type HttpMethod = 'GET' | 'POST' | 'DELETE'
+
+export async function apiRequest<T>(method: HttpMethod, path: string, { body, bearer, timeoutMs = TIMEOUT_MS, signal }: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (bearer) headers.Authorization = `Bearer ${bearer}`
@@ -37,10 +43,11 @@ export async function apiRequest<T>(method: 'GET' | 'POST', path: string, { body
       credentials: 'omit',
       cache: 'no-store',
       referrerPolicy: 'no-referrer',
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
     })
   } catch (e) {
-    throw new ApiError(e instanceof DOMException && e.name === 'TimeoutError' ? 'timeout' : 'network')
+    const name = e instanceof DOMException ? e.name : ''
+    throw new ApiError(name === 'TimeoutError' ? 'timeout' : name === 'AbortError' ? 'aborted' : 'network')
   }
 
   if (!res.ok) throw new ApiError('http', res.status)

@@ -6,7 +6,7 @@ import ResetPasswordPage from './features/auth/pages/ResetPasswordPage'
 import { RedirectIfAuthenticated, RequireAuth } from './features/auth/routes/RequireAuth'
 import LandingPage from './features/landing/pages/LandingPage'
 import ComingSoonPage from './pages/ComingSoonPage'
-import WorkspacePlaceholderPage from './pages/WorkspacePlaceholderPage'
+import DashboardRoute from './features/dashboard/pages/DashboardRoute'
 
 export default function App() {
   return (
@@ -16,7 +16,7 @@ export default function App() {
       <Route path="/register" element={<RedirectIfAuthenticated><RegisterPage /></RedirectIfAuthenticated>} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/app" element={<RequireAuth><WorkspacePlaceholderPage /></RequireAuth>} />
+      <Route path="/app" element={<RequireAuth><DashboardRoute /></RequireAuth>} />
       <Route path="*" element={<ComingSoonPage title="This page" />} />
     </Routes>
   )
