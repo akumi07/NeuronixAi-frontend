@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { authApi } from '../api/authApi'
+import { ApiError, apiRequest, type HttpMethod } from '../api/httpClient'
 import { readTokenExpiryMs } from '../api/jwtExpiry'
 
 /**
@@ -14,7 +15,15 @@ interface Session {
   email: string
 }
 
+export type AuthedRequest = <T>(
+  method: HttpMethod,
+  path: string,
+  options?: { body?: unknown; timeoutMs?: number; signal?: AbortSignal },
+) => Promise<T>
+
 interface AuthContextValue {
+  /** Sends a request with the in-memory bearer token. A 401 signs the user out (expired/revoked session). */
+  authedRequest: AuthedRequest
   email: string | null
   isAuthenticated: boolean
   /** True when the last sign-out was caused by token expiry. */
@@ -62,6 +71,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [session])
 
+  const authedRequest = useCallback<AuthedRequest>(
+    async (method, path, options) => {
+      if (!session) throw new ApiError('http', 401)
+      try {
+        return await apiRequest(method, path, { ...options, bearer: session.token })
+      } catch (e) {
+        if (e instanceof ApiError && e.kind === 'http' && e.status === 401) {
+          setSession(null)
+          setSessionExpired(true)
+        }
+        throw e
+      }
+    },
+    [session],
+  )
+
   const requestPasswordReset = useCallback(async (email: string) => {
     const { accessToken } = await authApi.forgetPassword(email)
     setResetToken(accessToken)
@@ -94,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthContextValue>(
     () => ({
+      authedRequest,
       email: session?.email ?? null,
       isAuthenticated: session !== null,
       sessionExpired,
@@ -106,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       completePasswordReset,
       discardResetSession,
     }),
-    [session, sessionExpired, resetToken, login, register, logout, clearSessionExpired, requestPasswordReset, completePasswordReset, discardResetSession],
+    [authedRequest, session, sessionExpired, resetToken, login, register, logout, clearSessionExpired, requestPasswordReset, completePasswordReset, discardResetSession],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
