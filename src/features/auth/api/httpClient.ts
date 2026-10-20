@@ -31,7 +31,9 @@ export type HttpMethod = 'GET' | 'POST' | 'DELETE'
 
 export async function apiRequest<T>(method: HttpMethod, path: string, { body, bearer, timeoutMs = TIMEOUT_MS, signal }: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' }
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData
+  // For FormData the browser sets the multipart Content-Type (with boundary) itself.
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json'
   if (bearer) headers.Authorization = `Bearer ${bearer}`
 
   let res: Response
@@ -39,7 +41,7 @@ export async function apiRequest<T>(method: HttpMethod, path: string, { body, be
     res = await fetch(`${BASE_URL}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
       credentials: 'omit',
       cache: 'no-store',
       referrerPolicy: 'no-referrer',
