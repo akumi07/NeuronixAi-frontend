@@ -11,3 +11,18 @@ export function formatDay(iso: string): string {
   if (days <= 7) return rtf.format(-days, 'day').replace(/^./, (c) => c.toUpperCase())
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: days > 300 ? 'numeric' : undefined })
 }
+
+const parse = (iso: string) => new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`)
+
+/** Difference between two API timestamps. Both share the same (unknown) zone, so the delta is zone-independent. */
+export function secondsBetween(fromIso: string, toIso: string): number | null {
+  const ms = parse(toIso).getTime() - parse(fromIso).getTime()
+  return Number.isNaN(ms) || ms < 0 ? null : Math.round(ms / 1000)
+}
+
+/** Days between today and the timestamp (day-level; assumes UTC like formatDay). */
+export function daysAgo(iso: string): number {
+  const d = parse(iso)
+  if (Number.isNaN(d.getTime())) return Infinity
+  return Math.round((new Date().setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 86_400_000)
+}

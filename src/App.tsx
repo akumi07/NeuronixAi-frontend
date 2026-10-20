@@ -8,6 +8,7 @@ import WorkspaceRoute from './features/workspace/pages/WorkspaceRoute'
 import AgentDetailPage from './features/agents/pages/AgentDetailPage'
 import AgentDirectoryPage from './features/agents/pages/AgentDirectoryPage'
 import AgentsRoute from './features/agents/pages/AgentsRoute'
+import TasksRoute from './features/tasks/pages/TasksRoute'
 import LandingPage from './features/landing/pages/LandingPage'
 import ComingSoonPage from './pages/ComingSoonPage'
 import DashboardRoute from './features/dashboard/pages/DashboardRoute'
@@ -22,6 +23,7 @@ export default function App() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/app" element={<RequireAuth><DashboardRoute /></RequireAuth>} />
       <Route path="/app/workspace/:conversationId?" element={<RequireAuth><WorkspaceRoute /></RequireAuth>} />
+      <Route path="/app/tasks/:taskId?" element={<RequireAuth><TasksRoute /></RequireAuth>} />
       <Route path="/app/agents" element={<RequireAuth><AgentsRoute><AgentDirectoryPage /></AgentsRoute></RequireAuth>} />
       <Route path="/app/agents/:agentId" element={<RequireAuth><AgentsRoute><AgentDetailPage /></AgentsRoute></RequireAuth>} />
       <Route path="*" element={<ComingSoonPage title="This page" />} />

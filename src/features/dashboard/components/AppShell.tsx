@@ -1,13 +1,13 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Bot, Globe, LayoutDashboard, Menu, Plus, Sparkles, X } from 'lucide-react'
+import { Bot, Globe, History, LayoutDashboard, Menu, Plus, Sparkles, X } from 'lucide-react'
 import { BrandLogo } from '../../landing/components/BrandLogo'
 import { AccountMenu } from './AccountMenu'
 
 interface Props {
   email: string
   onLogout: () => Promise<void>
-  active: 'dashboard' | 'workspace' | 'agents'
+  active: 'dashboard' | 'workspace' | 'tasks' | 'agents'
   /** Extra sidebar content (e.g. task history), rendered between navigation and the account menu. */
   sidebarExtra?: (closeMenu: () => void) => ReactNode
   wide?: boolean
@@ -40,6 +40,7 @@ export function AppShell({ email, onLogout, active, sidebarExtra, wide, children
           {[
             { id: 'dashboard', to: '/app', label: 'Dashboard', Icon: LayoutDashboard },
             { id: 'workspace', to: '/app/workspace', label: 'Workspace', Icon: Sparkles },
+            { id: 'tasks', to: '/app/tasks', label: 'Tasks', Icon: History },
             { id: 'agents', to: '/app/agents', label: 'Agents', Icon: Bot },
           ].map(({ id, to, label, Icon }) => (
             <li key={id}>
