@@ -13,6 +13,7 @@ export default function LoginPage() {
   const location = useLocation()
   const notice = (location.state as { notice?: string } | null)?.notice
   const passwordReset = notice === 'password-reset' || notice === 'password-changed'
+  const registered = notice === 'registered'
   const [failure, setFailure] = useState<AuthFailure | null>(null)
   const {
     register,
@@ -39,6 +40,7 @@ export default function LoginPage() {
       footer={<>New to NeuronixAI? <Link to="/register" className="font-semibold text-violet hover:underline">Create an account</Link></>}
     >
       {passwordReset && <FormAlert tone="success" title="Password updated">Sign in with your new password.</FormAlert>}
+      {registered && <FormAlert tone="success" title="Email verified">Your account is ready. Sign in to continue.</FormAlert>}
       {sessionExpired && <FormAlert tone="info" title="Your session expired">Please sign in again to continue.</FormAlert>}
       {failure && <FormAlert tone="error" title={failure.title}>{failure.message}</FormAlert>}
 

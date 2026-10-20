@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../../auth/context/AuthContext'
-import { ApiError } from '../../auth/api/httpClient'
+import { ApiError, effectiveStatus } from '../../../api/errors'
 import { describeFailure, isAborted, type Failure } from '../../dashboard/api/failures'
 import type { ChatMessage } from '../../dashboard/api/types'
 import { createWorkspaceApi } from '../../dashboard/api/workspaceApi'
@@ -23,7 +23,7 @@ const UNAVAILABLE: Failure = {
 
 /** Same message for 403/404/500 so another user's conversation can't be told apart from a missing one. */
 export function describeThreadFailure(e: unknown): Failure {
-  if (e instanceof ApiError && e.kind === 'http' && [400, 403, 404, 500].includes(e.status)) return UNAVAILABLE
+  if (e instanceof ApiError && e.kind === 'http' && [400, 403, 404, 500].includes(effectiveStatus(e))) return UNAVAILABLE
   return describeFailure(e)
 }
 

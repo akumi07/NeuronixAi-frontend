@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../../auth/context/AuthContext'
-import { ApiError } from '../../auth/api/httpClient'
+import { ApiError, effectiveStatus } from '../../../api/errors'
 import type { Failure } from '../../dashboard/api/failures'
 import { describeFailure } from '../../dashboard/api/failures'
 import { createDocumentApi, type DocumentRecord } from '../api/documentApi'
@@ -10,9 +10,10 @@ const key = (f: { name: string; size: number }) => `${f.name}\u0000${f.size}`
 
 function describeUploadFailure(e: unknown): Failure {
   if (e instanceof ApiError && e.kind === 'http') {
-    if (e.status === 413) return { title: 'File too large', message: 'The server rejected this file because it exceeds its size limit.' }
-    if (e.status === 403) return { title: 'Not allowed', message: 'Your account isn’t permitted to upload documents.' }
-    if (e.status === 400 || e.status === 415 || e.status === 500)
+    const status = effectiveStatus(e)
+    if (status === 413) return { title: 'File too large', message: 'The server rejected this file because it exceeds its size limit.' }
+    if (status === 403) return { title: 'Not allowed', message: 'Your account isn’t permitted to upload documents.' }
+    if (status === 400 || status === 415 || status === 500)
       return { title: 'Upload failed', message: 'The server couldn’t accept this file. Make sure it is a valid PDF and try again. The server doesn’t say why uploads are rejected.' }
   }
   return describeFailure(e)

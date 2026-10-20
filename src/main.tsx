@@ -5,6 +5,7 @@ import { MotionConfig } from 'motion/react'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { AuthProvider } from './features/auth/context/AuthContext'
+import { AuthFlowProvider } from './features/auth/flow/AuthFlowContext'
 import { applyPreferences, usePreferences } from './features/settings/preferences'
 import './styles/index.css'
 
@@ -16,7 +17,9 @@ function Root() {
     <MotionConfig reducedMotion={prefs.motion === 'reduce' ? 'always' : 'user'}>
       <BrowserRouter>
         <AuthProvider>
-          <App />
+          <AuthFlowProvider>
+            <App />
+          </AuthFlowProvider>
         </AuthProvider>
       </BrowserRouter>
     </MotionConfig>
