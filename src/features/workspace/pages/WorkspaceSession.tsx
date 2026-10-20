@@ -4,7 +4,7 @@ import { CapabilityStarters } from '../../dashboard/components/CapabilityStarter
 import { TaskComposer } from '../../dashboard/components/TaskComposer'
 import { ConversationView } from '../components/ConversationView'
 import { OrchestrationPanel } from '../components/OrchestrationPanel'
-import { clearHandoffDraft, peekHandoffDraft } from '../data/handoff'
+import { clearHandoffDraft, peekHandoffDraft } from '../../../lib/handoffDraft'
 import { useTaskSession } from '../hooks/useTaskSession'
 
 interface Props {

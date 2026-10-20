@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { authApi } from '../api/authApi'
 import { ApiError, apiRequest, type HttpMethod } from '../api/httpClient'
 import { readTokenExpiryMs } from '../api/jwtExpiry'
+import { clearHandoffDraft } from '../../../lib/handoffDraft'
 
 /**
  * Session state lives in memory only: the backend issues a 24h bearer JWT with no refresh endpoint,
@@ -64,6 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const current = session
     setSession(null) // always sign out locally, even if the network call fails
     setSessionExpired(false)
+    setResetToken(null)
+    clearHandoffDraft()
     if (current) {
       try {
         await authApi.logout(current.token)
@@ -82,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (method, path, options) => {
       if (!session) throw new ApiError('http', 401)
       const is401 = (e: unknown) => e instanceof ApiError && e.kind === 'http' && e.status === 401
-      const endSession = () => { setSession(null); setSessionExpired(true) }
+      const endSession = () => { setSession(null); setResetToken(null); clearHandoffDraft(); setSessionExpired(true) }
       try {
         return await apiRequest(method, path, { ...options, bearer: session.token })
       } catch (e) {
@@ -125,6 +128,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const delay = Math.min(Math.max(expiresAt - Date.now(), 0), 2 ** 31 - 1)
     const id = window.setTimeout(() => {
       setSession(null)
+      setResetToken(null)
+      clearHandoffDraft()
       setSessionExpired(true)
     }, delay)
     return () => window.clearTimeout(id)

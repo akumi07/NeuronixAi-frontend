@@ -1,7 +1,7 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, ArrowUpRight, Lock, Wand2 } from 'lucide-react'
 import { useAuth } from '../../auth/context/AuthContext'
-import { setHandoffDraft } from '../../workspace/data/handoff'
+import { setHandoffDraft } from '../../../lib/handoffDraft'
 import { AVAILABILITY_LABEL, AGENT_PROFILES, PROFILE_BY_ID } from '../data/agentCatalog'
 import { CatalogNotice } from '../components/CatalogNotice'
 import { StatusPill } from '../components/StatusPill'

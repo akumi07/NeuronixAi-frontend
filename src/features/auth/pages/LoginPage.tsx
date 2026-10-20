@@ -11,7 +11,8 @@ import { loginSchema, type LoginValues } from '../schemas'
 export default function LoginPage() {
   const { login, sessionExpired } = useAuth()
   const location = useLocation()
-  const passwordReset = (location.state as { notice?: string } | null)?.notice === 'password-reset'
+  const notice = (location.state as { notice?: string } | null)?.notice
+  const passwordReset = notice === 'password-reset' || notice === 'password-changed'
   const [failure, setFailure] = useState<AuthFailure | null>(null)
   const {
     register,

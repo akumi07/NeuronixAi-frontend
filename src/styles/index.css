@@ -39,5 +39,10 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .flow-line { animation: none; }
-  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 }
+
+/* Same behaviour when the user opts in from Settings (data-motion="reduce" is set on <html>). */
+[data-motion='reduce'] { scroll-behavior: auto; }
+[data-motion='reduce'] .flow-line { animation: none; }
+[data-motion='reduce'] *, [data-motion='reduce'] *::before, [data-motion='reduce'] *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }

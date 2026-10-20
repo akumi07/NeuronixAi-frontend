@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/context/AuthContext'
-import { setHandoffDraft } from '../../workspace/data/handoff'
+import { setHandoffDraft } from '../../../lib/handoffDraft'
 import { useConversationList } from '../../workspace/hooks/useConversationList'
 import { AppShell } from '../components/AppShell'
 import { CapabilityStarters } from '../components/CapabilityStarters'

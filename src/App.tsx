@@ -11,6 +11,7 @@ import AgentsRoute from './features/agents/pages/AgentsRoute'
 import TasksRoute from './features/tasks/pages/TasksRoute'
 import ConversationsRoute from './features/conversations/pages/ConversationsRoute'
 import KnowledgeRoute from './features/knowledge/pages/KnowledgeRoute'
+import SettingsRoute from './features/settings/pages/SettingsRoute'
 import LandingPage from './features/landing/pages/LandingPage'
 import ComingSoonPage from './pages/ComingSoonPage'
 import DashboardRoute from './features/dashboard/pages/DashboardRoute'
@@ -28,6 +29,7 @@ export default function App() {
       <Route path="/app/tasks/:taskId?" element={<RequireAuth><TasksRoute /></RequireAuth>} />
       <Route path="/app/conversations/:conversationId?" element={<RequireAuth><ConversationsRoute /></RequireAuth>} />
       <Route path="/app/knowledge" element={<RequireAuth><KnowledgeRoute /></RequireAuth>} />
+      <Route path="/app/settings" element={<RequireAuth><SettingsRoute /></RequireAuth>} />
       <Route path="/app/agents" element={<RequireAuth><AgentsRoute><AgentDirectoryPage /></AgentsRoute></RequireAuth>} />
       <Route path="/app/agents/:agentId" element={<RequireAuth><AgentsRoute><AgentDetailPage /></AgentsRoute></RequireAuth>} />
       <Route path="*" element={<ComingSoonPage title="This page" />} />
