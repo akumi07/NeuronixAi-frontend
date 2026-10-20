@@ -37,7 +37,7 @@ export function describeSpeechError(code: string): string {
     case 'service-not-allowed': return 'Microphone access was blocked. Allow it in your browser’s site settings to use voice.'
     case 'audio-capture': return 'No microphone was found.'
     case 'no-speech': return 'No speech was heard. Try again.'
-    case 'network': return 'The browser’s speech service couldn’t be reached.'
+    case 'network': return 'The browser’s speech service couldn’t be reached. Some browsers (such as Brave) turn it off. Try Chrome, Edge or Safari.'
     case 'language-not-supported': return 'Your language isn’t supported for voice input in this browser.'
     default: return 'Voice input stopped unexpectedly.'
   }
