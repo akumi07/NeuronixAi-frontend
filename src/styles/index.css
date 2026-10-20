@@ -1,0 +1,43 @@
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/bricolage-grotesque';
+@import 'tailwindcss';
+
+@theme {
+  --color-violet: #7047eb;
+  --color-indigo: #5145cd;
+  --color-blue: #3685f5;
+  --color-cyan: #20c9d7;
+  --color-coral: #ff7867;
+  --color-mint: #40d9a0;
+  --color-amber: #ffbe55;
+  --color-canvas: #f7f8ff;
+  --color-ink: #20213a;
+  --color-muted: #6b7088;
+  --color-line: #e8eaf5;
+  --font-display: 'Bricolage Grotesque Variable', 'Inter Variable', system-ui, sans-serif;
+  --font-sans: 'Inter Variable', system-ui, sans-serif;
+  --shadow-soft: 0 1px 2px rgb(32 33 58 / 0.04), 0 12px 32px -12px rgb(81 69 205 / 0.18);
+  --shadow-lift: 0 2px 4px rgb(32 33 58 / 0.05), 0 24px 48px -16px rgb(81 69 205 / 0.28);
+}
+
+html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
+body { background: var(--color-canvas); color: var(--color-ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
+
+:focus-visible { outline: 2px solid var(--color-violet); outline-offset: 3px; border-radius: 6px; }
+
+/* Faint dot grid used behind the hero */
+.dot-grid {
+  background-image: radial-gradient(rgb(81 69 205 / 0.14) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 70% 70% at 60% 40%, #000 30%, transparent 75%);
+}
+
+@keyframes flow { to { stroke-dashoffset: -24; } }
+.flow-line { stroke-dasharray: 4 8; animation: flow 1.6s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .flow-line { animation: none; }
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
