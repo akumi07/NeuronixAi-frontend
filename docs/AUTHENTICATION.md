@@ -44,3 +44,12 @@ Source of truth: `akumi07/NeuronixAI` (Spring Boot), read at the time of impleme
 8. `POST /api/v1/users` is public and its DTO has no password-length constraint (bypasses the 8-char rule of `/register`).
 9. `GET /api/v1/users` and `GET /api/v1/users/{id}` are available to any authenticated user (lists all users' emails).
 10. No CORS configuration.
+
+## Update: 401 can mask server errors (found while testing uploads)
+Spring Security secures the `/error` dispatch when `anyRequest().authenticated()` is used and `/error` is not permitted. Any exception in a controller
+(e.g. rejected/oversized upload, S3 failure, `IllegalArgumentException`, unhandled `ConversationNotFoundException`) is then forwarded to `/error`, where the
+request is unauthenticated, so the client receives **401 Unauthorized** instead of 4xx/5xx. Backend fix: permit the error dispatch
+(`.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()` or `.requestMatchers("/error").permitAll()`), then add proper exception handlers.
+
+Frontend mitigation: on a 401 the authenticated client calls `GET /api/v1/users/me`; it signs the user out only if that also returns 401. Otherwise the original
+request is reported as a server error and the session is kept.
