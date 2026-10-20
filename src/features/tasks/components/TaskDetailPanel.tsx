@@ -9,6 +9,8 @@ import { formatDay, secondsBetween } from '../../dashboard/data/formatDate'
 import { setHandoffDraft } from '../../../lib/handoffDraft'
 import { CopyButton, MessageContent } from '../../workspace/components/MessageContent'
 import { useTaskDetail } from '../hooks/useTaskDetail'
+import { useExecutions } from '../../workspace/hooks/useExecutions'
+import { ExecutionUnavailable, ExecutionView } from '../../workspace/components/ExecutionView'
 import { ConfirmDialog } from './ConfirmDialog'
 
 interface Props {
@@ -26,6 +28,7 @@ export function TaskDetailPanel({ task, onDelete }: Props) {
   const { email } = useAuth()
   const navigate = useNavigate()
   const { state, retry } = useTaskDetail(task.id)
+  const tracker = useExecutions(task.id, null)
   const [confirming, setConfirming] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteFailure, setDeleteFailure] = useState<Failure | null>(null)
@@ -113,11 +116,16 @@ export function TaskDetailPanel({ task, onDelete }: Props) {
               )
             })}
           </ol>
-          <p className="mt-6 rounded-2xl border border-dashed border-line p-3 text-xs text-muted">
-            <strong>Agent steps: not available.</strong> The backend doesn’t record which agents or steps handled a task, so no execution graph is shown.
-          </p>
         </section>
       )}
+
+      <section aria-label="Executions" className="rounded-3xl border border-line bg-white p-6 shadow-soft">
+        <h2 className="font-display text-xl font-bold">Executions</h2>
+        <p className="mt-1 text-sm text-muted">Agent selection and workflow steps, exactly as reported by the backend.</p>
+        <div className="mt-4">
+          {tracker.executions.length > 0 || tracker.loading || tracker.failure ? <ExecutionView tracker={tracker} /> : tracker.unavailable ? <ExecutionUnavailable tracker={tracker} /> : <p className="rounded-2xl border border-dashed border-line p-4 text-sm text-muted">No executions have been reported for this task.</p>}
+        </div>
+      </section>
 
       {confirming && (
         <ConfirmDialog

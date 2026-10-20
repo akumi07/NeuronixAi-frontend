@@ -55,3 +55,10 @@ export function useApi() {
     return callEndpoint(requester, endpoint, options)
   }, [authedRequest])
 }
+
+/** Validates data that did not come through callEndpoint (e.g. uploads). A mismatch is a handled 'malformed' error. */
+export function parseResponse<R>(schema: ZodType<R>, raw: unknown): R {
+  const parsed = schema.safeParse(raw)
+  if (!parsed.success) throw new ApiError('malformed')
+  return parsed.data
+}

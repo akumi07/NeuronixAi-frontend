@@ -20,3 +20,5 @@ export function useSelectedDocuments(email: string): SelectedDocument[] {
     () => (state && state.email === email ? state.docs : EMPTY),
   )
 }
+
+export const getSelectedDocuments = (email: string): SelectedDocument[] => (state && state.email === email ? state.docs : EMPTY)

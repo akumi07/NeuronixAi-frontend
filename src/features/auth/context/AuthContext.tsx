@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { authApi } from '../api/authApi'
-import { ApiError, apiRequest, type HttpMethod } from '../api/httpClient'
+import { ApiError, apiRequest, apiUpload, type HttpMethod } from '../api/httpClient'
 import { readTokenExpiryMs } from '../api/jwtExpiry'
 import { clearHandoffDraft } from '../../../lib/handoffDraft'
 import { clearHeldExecution } from '../../../lib/executionHandoff'
@@ -32,7 +32,11 @@ export type RegisterOutcome =
   | { kind: 'signedIn' }
   | { kind: 'pendingVerification'; maskedEmail?: string; resendAvailableInSeconds?: number }
 
+export type AuthedUpload = <T>(path: string, form: FormData, options?: { signal?: AbortSignal; onProgress?: (fraction: number) => void; timeoutMs?: number }) => Promise<T>
+
 interface AuthContextValue {
+  /** Multipart upload with progress; same session handling as authedRequest. */
+  authedUpload: AuthedUpload
   /** Sends a request with the in-memory bearer token. A 401 signs the user out only if the token is truly rejected. */
   authedRequest: AuthedRequest
   email: string | null
@@ -93,19 +97,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * A 401 does not always mean the session ended: with Spring Security's secured /error dispatch, ordinary
-   * server-side failures (e.g. a rejected or oversized upload, a storage error) can surface as 401. So on a 401
+   * server-side failures (e.g. a rejected or oversized upload, a storage error, a missing route) can surface as 401. So on a 401
    * we ask the backend whether the token is still accepted (GET /users/me) and only sign out if it is not.
    */
-  const authedRequest = useCallback<AuthedRequest>(
-    async (method, path, options) => {
+  const guarded = useCallback(
+    async <T,>(run: (token: string) => Promise<T>): Promise<T> => {
       if (!session) throw new ApiError('http', 401)
       const is401 = (e: unknown) => e instanceof ApiError && e.kind === 'http' && e.status === 401
       const endSession = () => { setSession(null); clearPrivateMemory(); setSessionExpired(true) }
       try {
-        return await apiRequest(method, path, { ...options, bearer: session.token })
+        return await run(session.token)
       } catch (e) {
         if (!is401(e)) throw e
-        if (path === SESSION_PROBE_PATH) { endSession(); throw e }
+        if (e instanceof ApiError && e.sessionValid) throw e
         try {
           await apiRequest('GET', SESSION_PROBE_PATH, { bearer: session.token })
         } catch (probeError) {
@@ -117,6 +121,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     [session],
+  )
+
+  const authedRequest = useCallback<AuthedRequest>(
+    (method, path, options) => guarded((token) => apiRequest(method, path, { ...options, bearer: token })),
+    [guarded],
+  )
+  // The probe itself must not recurse: a 401 on /users/me means the session is really invalid.
+  const authedUpload = useCallback<AuthedUpload>(
+    (path, form, options) => guarded((token) => apiUpload(path, form, { ...options, bearer: token })),
+    [guarded],
   )
 
   const clearSessionExpired = useCallback(() => setSessionExpired(false), [])
@@ -138,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       authedRequest,
+      authedUpload,
       email: session?.email ?? null,
       isAuthenticated: session !== null,
       sessionExpired,
@@ -147,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       clearSessionExpired,
     }),
-    [authedRequest, session, sessionExpired, login, register, startSession, logout, clearSessionExpired],
+    [authedRequest, authedUpload, session, sessionExpired, login, register, startSession, logout, clearSessionExpired],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
