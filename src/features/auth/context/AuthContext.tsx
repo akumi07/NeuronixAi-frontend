@@ -3,6 +3,12 @@ import { authApi } from '../api/authApi'
 import { ApiError, apiRequest, type HttpMethod } from '../api/httpClient'
 import { readTokenExpiryMs } from '../api/jwtExpiry'
 import { clearHandoffDraft } from '../../../lib/handoffDraft'
+import { clearHeldExecution } from '../../../lib/executionHandoff'
+import { clearSelectedDocuments } from '../../../lib/documentSelection'
+import { clearAllAvailability } from '../../../api/availability'
+
+/** Everything private or session-specific that lives outside React state. */
+const clearPrivateMemory = () => { clearHandoffDraft(); clearHeldExecution(); clearSelectedDocuments(); clearAllAvailability() }
 
 /**
  * Session state lives in memory only: the backend issues a 24h bearer JWT with no refresh endpoint,
@@ -75,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const current = session
     setSession(null) // always sign out locally, even if the network call fails
     setSessionExpired(false)
-    clearHandoffDraft()
+    clearPrivateMemory()
     if (current) {
       try {
         await authApi.logout(current.token)
@@ -94,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (method, path, options) => {
       if (!session) throw new ApiError('http', 401)
       const is401 = (e: unknown) => e instanceof ApiError && e.kind === 'http' && e.status === 401
-      const endSession = () => { setSession(null); clearHandoffDraft(); setSessionExpired(true) }
+      const endSession = () => { setSession(null); clearPrivateMemory(); setSessionExpired(true) }
       try {
         return await apiRequest(method, path, { ...options, bearer: session.token })
       } catch (e) {
@@ -123,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const delay = Math.min(Math.max(expiresAt - Date.now(), 0), 2 ** 31 - 1)
     const id = window.setTimeout(() => {
       setSession(null)
-        clearHandoffDraft()
+        clearPrivateMemory()
       setSessionExpired(true)
     }, delay)
     return () => window.clearTimeout(id)

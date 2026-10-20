@@ -1,15 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { isMarkedUnavailable } from '../../../api/availability'
+import { isTerminal } from '../../../api/contracts/orchestration'
+import { categorize } from '../../../api/normalize'
+import { clearHeldExecution, holdExecution, peekExecution } from '../../../lib/executionHandoff'
+import { useOrchestrationApi } from '../api/orchestrationApi'
+import { useExecutions } from './useExecutions'
 import { useAuth } from '../../auth/context/AuthContext'
-import { ApiError, effectiveStatus } from '../../../api/errors'
+import { ApiError, effectiveStatus, isApiError } from '../../../api/errors'
 import { describeFailure, isAborted, type Failure } from '../../dashboard/api/failures'
 import type { ChatMessage } from '../../dashboard/api/types'
 import { createWorkspaceApi } from '../../dashboard/api/workspaceApi'
 import type { Load } from '../../dashboard/hooks/load'
 
 /** Only states the client can truly observe. The backend exposes no routing, agent, or step events. */
-export type RunPhase = 'idle' | 'sending' | 'received' | 'failed' | 'cancelled'
+export type RunPhase = 'idle' | 'sending' | 'running' | 'received' | 'failed' | 'cancelled'
 
 interface Options {
+  email: string
   /** null for a brand-new task. The server decides whether the user may access an id. */
   conversationId: number | null
   onChanged: () => void
@@ -27,8 +34,13 @@ export function describeThreadFailure(e: unknown): Failure {
   return describeFailure(e)
 }
 
-export function useTaskSession({ conversationId, onChanged, onCreated }: Options) {
+export function useTaskSession({ email, conversationId, onChanged, onCreated }: Options) {
   const { authedRequest } = useAuth()
+  const orchestration = useOrchestrationApi()
+  const [seed] = useState(() => (conversationId === null ? null : peekExecution(email, String(conversationId))))
+  const tracker = useExecutions(conversationId, seed)
+  const [documentsNotUsed, setDocumentsNotUsed] = useState(false)
+  const watching = useRef<string | null>(null)
   const api = useMemo(() => createWorkspaceApi(authedRequest), [authedRequest])
 
   const [thread, setThread] = useState<Load<ChatMessage[]>>(
@@ -52,6 +64,7 @@ export function useTaskSession({ conversationId, onChanged, onCreated }: Options
     return () => controller.abort()
   }, [api, conversationId, attempt])
 
+  useEffect(() => { clearHeldExecution() }, [])
   useEffect(() => () => inflight.current?.abort(), [])
 
   const reloadThread = useCallback(() => { setThread({ status: 'loading' }); setAttempt((n) => n + 1) }, [])
@@ -67,15 +80,36 @@ export function useTaskSession({ conversationId, onChanged, onCreated }: Options
 
   /** Resolves true when the reply was received, so the composer can clear; otherwise the draft is kept. */
   const send = useCallback(
-    async (message: string) => {
+    async (message: string, documentIds: Array<number | string> = []) => {
       const controller = new AbortController()
       inflight.current = controller
       const started = performance.now()
+      let keepPending = false
       setFailure(null)
       setFailedMessage(null)
+      setDocumentsNotUsed(false)
       setPending(message)
       setPhase('sending')
       try {
+        // Automatic agent selection: the backend orchestrator decides which agents run. If the orchestration endpoint is
+        // confirmed unavailable we use the real chat endpoint instead; any other failure is reported, never papered over.
+        if (!isMarkedUnavailable('orchestration')) {
+          try {
+            const ex = await orchestration.start({ prompt: message, conversationId: conversationId ?? undefined, documentIds, executionMode: 'AUTO' }, controller.signal)
+            watching.current = ex.executionId
+            keepPending = true
+            tracker.track(ex)
+            onChanged()
+            if (conversationId === null && ex.conversationId !== undefined && Number.isFinite(Number(ex.conversationId))) {
+              holdExecution(email, String(ex.conversationId), ex)
+              onCreated(Number(ex.conversationId))
+            }
+            return true
+          } catch (e) {
+            if (!(isApiError(e) && categorize(e, { planned: true }) === 'unavailable')) throw e
+          }
+        }
+        if (documentIds.length > 0) setDocumentsNotUsed(true) // chat cannot use documents; do not claim it did
         const reply = await api.chat(message, conversationId, controller.signal)
         setDurationMs(performance.now() - started)
         setPhase('received')
@@ -96,15 +130,25 @@ export function useTaskSession({ conversationId, onChanged, onCreated }: Options
         }
         return false
       } finally {
-        setPending(null)
+        if (!keepPending) setPending(null)
         inflight.current = null
       }
     },
-    [api, conversationId, onChanged, onCreated, refetchMessages],
+    [api, orchestration, tracker, email, conversationId, onChanged, onCreated, refetchMessages],
   )
+
+  // When the backend reports the execution we started as finished, load the saved messages.
+  const latest = tracker.latest
+  const latestId = latest?.executionId
+  const latestStatus = latest?.status
+  useEffect(() => {
+    if (!latestId || !latestStatus || watching.current !== latestId || !isTerminal(latestStatus)) return
+    watching.current = null
+    void (async () => { await refetchMessages(); setPending(null); onChanged() })()
+  }, [latestId, latestStatus, refetchMessages, onChanged])
 
   /** Stops waiting in the browser only. It cannot stop the backend, which may still finish and save the reply. */
   const cancel = useCallback(() => inflight.current?.abort(), [])
 
-  return { thread, pending, phase, failure, failedMessage, durationMs, send, cancel, reloadThread }
+  return { thread, pending, phase: tracker.hasActive && phase !== 'sending' ? ('running' as RunPhase) : phase, failure, failedMessage, durationMs, send, cancel, reloadThread, executions: tracker, documentsNotUsed }
 }
