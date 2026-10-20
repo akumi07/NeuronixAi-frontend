@@ -72,14 +72,26 @@ const COPY: Record<ErrorCategory, { title: string; message: string }> = {
   service_unavailable: { title: 'Temporarily unavailable', message: 'The service is busy or restarting. Please try again shortly.' },
 }
 
+/** Copy for stable backend codes (proposed contract). Unknown codes fall back to the category copy. */
+const CODE_COPY: Record<string, { title: string; message: string }> = {
+  DOCUMENT_NOT_FOUND: { title: 'Document not found', message: 'That document no longer exists or isn’t available to you.' },
+  DOCUMENT_NOT_READY: { title: 'Document not ready yet', message: 'The backend hasn’t finished processing this document. Try again when it is ready.' },
+  DOCUMENT_ALREADY_PROCESSED: { title: 'Already processed', message: 'This document has already been processed.' },
+  EXECUTION_NOT_FOUND: { title: 'Execution not found', message: 'That execution no longer exists or isn’t available to you.' },
+  CONVERSATION_NOT_FOUND: { title: 'Conversation not found', message: 'That conversation no longer exists or isn’t available to you.' },
+}
+
 /** Safe, user-facing description. Server prose, stack traces, SQL or provider details are never included. */
 export function normalizeError(error: unknown, opts: CategorizeOptions = {}): NormalizedError {
   const category = categorize(error, opts)
   const base = COPY[category]
   const api = isApiError(error) ? error : null
   let message = base.message
+  let title = base.title
+  const coded = api?.code && category !== 'unavailable' ? CODE_COPY[api.code] : undefined
+  if (coded) { title = coded.title; message = coded.message }
   if (category === 'rate_limited' && api?.retryAfterSeconds) message = `Please wait ${api.retryAfterSeconds} seconds and try again.`
-  return { category, code: api?.code, title: base.title, message, retryAfterSeconds: api?.retryAfterSeconds }
+  return { category, code: api?.code, title, message, retryAfterSeconds: api?.retryAfterSeconds }
 }
 
 /** Categories where retrying later can succeed without the user changing anything. */

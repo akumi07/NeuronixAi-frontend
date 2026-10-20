@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { ENDPOINTS } from '../../../api/endpoints'
 import { otpSentResponse, verifyRegistrationResponse } from '../../../api/contracts/auth'
@@ -17,11 +18,13 @@ export default function RegisterVerifyPage() {
   const navigate = useNavigate()
   const { startSession } = useAuth()
   const { registration, setRegistration } = useAuthFlow()
-  if (!registration) return <Navigate to="/register" replace />
-  const { email } = registration
+  const [completed, setCompleted] = useState(false) // stops the guard below from redirecting while we sign in / navigate
+  if (!registration && !completed) return <Navigate to="/register" replace />
+  const email = registration?.email ?? ''
 
   const verify = async (otp: string) => {
     const res = await call(ENDPOINTS.auth.verifyEmailOtp, { body: { email, otp }, schema: verifyRegistrationResponse })
+    setCompleted(true)
     setRegistration(null)
     if (res.accessToken) startSession(email, res.accessToken) // guest-only route then redirects to the dashboard
     else navigate('/login', { replace: true, state: { notice: 'registered' } })
@@ -35,7 +38,7 @@ export default function RegisterVerifyPage() {
       subtitle="Confirm your email address to finish creating your account."
       footer={<Link to="/register" onClick={() => setRegistration(null)} className="font-semibold text-violet hover:underline">Use a different email</Link>}
     >
-      <OtpVerifyForm maskedEmail={registration.maskedEmail ?? maskEmail(email)} initialCooldownSeconds={registration.resendAfterSeconds ?? 30} verify={verify} resend={resend} submitLabel="Verify and continue" />
+      <OtpVerifyForm maskedEmail={registration?.maskedEmail ?? maskEmail(email)} initialCooldownSeconds={registration?.resendAfterSeconds ?? 30} verify={verify} resend={resend} submitLabel="Verify and continue" />
     </AuthShell>
   )
 }

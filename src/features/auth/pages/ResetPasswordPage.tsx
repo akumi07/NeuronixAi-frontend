@@ -24,11 +24,12 @@ export default function ResetPasswordPage() {
   const navigate = useNavigate()
   const { reset, setReset } = useAuthFlow()
   const [failure, setFailure] = useState<Failure | null>(null)
+  const [completed, setCompleted] = useState(false) // stops the guard below from redirecting while we navigate to /login
   const { register, handleSubmit, control, resetField, formState: { errors, isSubmitting } } = useForm<ResetValues>({ resolver: zodResolver(resetSchema) })
   const newPassword = useWatch({ control, name: 'password' })
 
-  if (!reset || reset.stage !== 'verified' || !reset.resetToken) return <Navigate to="/forgot-password" replace />
-  const { resetToken } = reset
+  if (!completed && (!reset || reset.stage !== 'verified' || !reset.resetToken)) return <Navigate to="/forgot-password" replace />
+  const resetToken = reset?.resetToken ?? ''
 
   const restart = () => { setReset(null); navigate('/forgot-password', { replace: true }) }
 
@@ -36,6 +37,7 @@ export default function ResetPasswordPage() {
     setFailure(null)
     try {
       await call(ENDPOINTS.auth.forgotReset, { body: { resetToken, newPassword: password, confirmPassword } })
+      setCompleted(true)
       setReset(null)
       navigate('/login', { replace: true, state: { notice: 'password-reset' } })
     } catch (e) {

@@ -71,6 +71,14 @@ export function useKnowledge(email: string) {
 
   useEffect(() => () => inflight.current?.abort(), [])
 
+  // While the backend reports a document as still processing, re-read the list so the real status appears (no guessing).
+  const anyProcessing = list.phase === 'ready' && list.docs.some((d) => documentPhase(d.status) === 'processing')
+  useEffect(() => {
+    if (!anyProcessing) return
+    const id = window.setInterval(() => refreshList(), 2500)
+    return () => window.clearInterval(id)
+  }, [anyProcessing, refreshList])
+
   const recheckList = useCallback(() => { clearUnavailable('documentList'); setList({ phase: 'loading' }); setAttempt((n) => n + 1) }, [])
 
   const base: DocumentRecord[] = list.phase === 'ready' ? list.docs : sessionDocs
@@ -127,7 +135,8 @@ export function useKnowledge(email: string) {
         try {
           const rec = await api.process(id)
           handled = true
-          if (rec?.status) setOverrides((o) => ({ ...o, [id]: { phase: documentPhase(rec.status), note: 'Status reported by the backend.' } }))
+          // Show the status the backend just returned; the server list (re-read below) stays the source of truth afterwards.
+          if (rec?.status) setSessionDocs((d) => d.map((x) => (x.id === id ? { ...x, status: rec.status } : x)))
           if (!isMarkedUnavailable('documentList')) refreshList()
           setProc(id, { running: false, note: 'Processing requested. The status above reflects what the backend reports.' })
         } catch (e) {

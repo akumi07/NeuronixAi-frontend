@@ -40,7 +40,7 @@ export function useTaskSession({ email, conversationId, onChanged, onCreated }: 
   const [seed] = useState(() => (conversationId === null ? null : peekExecution(email, String(conversationId))))
   const tracker = useExecutions(conversationId, seed)
   const [documentsNotUsed, setDocumentsNotUsed] = useState(false)
-  const watching = useRef<string | null>(null)
+  const seenActive = useRef<Set<string>>(new Set())
   const api = useMemo(() => createWorkspaceApi(authedRequest), [authedRequest])
 
   const [thread, setThread] = useState<Load<ChatMessage[]>>(
@@ -96,7 +96,6 @@ export function useTaskSession({ email, conversationId, onChanged, onCreated }: 
         if (!isMarkedUnavailable('orchestration')) {
           try {
             const ex = await orchestration.start({ prompt: message, conversationId: conversationId ?? undefined, documentIds, executionMode: 'AUTO' }, controller.signal)
-            watching.current = ex.executionId
             keepPending = true
             tracker.track(ex)
             onChanged()
@@ -142,8 +141,9 @@ export function useTaskSession({ email, conversationId, onChanged, onCreated }: 
   const latestId = latest?.executionId
   const latestStatus = latest?.status
   useEffect(() => {
-    if (!latestId || !latestStatus || watching.current !== latestId || !isTerminal(latestStatus)) return
-    watching.current = null
+    if (!latestId || !latestStatus) return
+    if (!isTerminal(latestStatus)) { seenActive.current.add(latestId); return }
+    if (!seenActive.current.delete(latestId)) return // finished before we ever saw it running: nothing new to load
     void (async () => { await refetchMessages(); setPending(null); onChanged() })()
   }, [latestId, latestStatus, refetchMessages, onChanged])
 

@@ -51,3 +51,11 @@ describe('transport errors and safety', () => {
     expect(JSON.stringify(n)).not.toMatch(/exception|sql|stack|java\./i)
   })
 })
+
+describe('stable backend codes', () => {
+  it('shows resource-specific copy for coded 404/409 (not "in development")', () => {
+    expect(normalizeError(http(404, { code: 'DOCUMENT_NOT_FOUND' }), { planned: true }).title).toBe('Document not found')
+    expect(normalizeError(http(409, { code: 'DOCUMENT_NOT_READY' }), { planned: true }).title).toBe('Document not ready yet')
+  })
+  it('keeps unknown codes on the category copy', () => expect(normalizeError(http(500, { code: 'SOMETHING_ELSE' })).title).toBe('Something went wrong on our side'))
+})
