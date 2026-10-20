@@ -40,10 +40,11 @@ export function useConversationList() {
       try {
         await api.deleteConversation(id)
         refresh()
-        return true
+        return { ok: true, failure: null as Failure | null }
       } catch (e) {
-        if (!isAborted(e)) setActionFailure(describeFailure(e))
-        return false
+        const failure = isAborted(e) ? null : describeFailure(e)
+        setActionFailure(failure)
+        return { ok: false, failure }
       }
     },
     [api, refresh],

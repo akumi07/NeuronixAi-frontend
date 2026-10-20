@@ -22,7 +22,7 @@ const UNAVAILABLE: Failure = {
 }
 
 /** Same message for 403/404/500 so another user's conversation can't be told apart from a missing one. */
-function describeThreadFailure(e: unknown): Failure {
+export function describeThreadFailure(e: unknown): Failure {
   if (e instanceof ApiError && e.kind === 'http' && [400, 403, 404, 500].includes(e.status)) return UNAVAILABLE
   return describeFailure(e)
 }

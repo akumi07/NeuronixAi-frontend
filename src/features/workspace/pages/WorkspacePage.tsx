@@ -27,7 +27,7 @@ export default function WorkspacePage({ email }: { email: string }) {
           actionFailure={list.actionFailure}
           onRetry={list.retry}
           onNavigate={close}
-          onDelete={async (id) => { if ((await list.remove(id)) && id === parsed) navigate('/app/workspace') }}
+          onDelete={async (id) => { if ((await list.remove(id)).ok && id === parsed) navigate('/app/workspace') }}
         />
       )}
     >
