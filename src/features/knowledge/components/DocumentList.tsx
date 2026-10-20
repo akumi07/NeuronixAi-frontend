@@ -64,6 +64,25 @@ function DocRow({ doc, k, onAsk, askActive, onDelete }: { doc: Displayed; k: Kno
   )
 }
 
+function AddById({ k }: { k: KnowledgeApi }) {
+  const [value, setValue] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  return (
+    <form className="mt-4 rounded-2xl border border-dashed border-amber/60 bg-amber/10 p-4 text-sm" onSubmit={(e) => { e.preventDefault(); const err = k.addExistingDocument(value); setError(err); if (!err) setValue('') }}>
+      <p className="font-semibold text-[#7A5410]">Development: ask a document that is already on the server</p>
+      <p className="mt-1 text-xs text-[#7A5410]">The backend has no document list yet. Enter the ID of a document you already processed (for example one you processed in Postman) to ask it questions.</p>
+      <div className="mt-3 flex flex-wrap items-start gap-2">
+        <div>
+          <label htmlFor="doc-id" className="sr-only">Document ID</label>
+          <input id="doc-id" inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Document ID" aria-invalid={error ? true : undefined} className="w-44 rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-violet focus:ring-4 focus:ring-violet/15" />
+          {error && <p role="alert" className="mt-1 text-xs text-[#9E2B1B]">{error}</p>}
+        </div>
+        <button type="submit" className="rounded-lg bg-amber px-3 py-2 text-sm font-semibold text-ink">Add to list</button>
+      </div>
+    </form>
+  )
+}
+
 export function DocumentList({ k, askId, onAsk }: { k: KnowledgeApi; askId: string | null; onAsk: (id: string) => void }) {
   const [confirm, setConfirm] = useState<Displayed | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -92,6 +111,7 @@ export function DocumentList({ k, askId, onAsk }: { k: KnowledgeApi; askId: stri
           </AnimatePresence>
         </ul>
       )}
+      {ENABLE_RAG_TEST_ENDPOINTS && <AddById k={k} />}
       {k.docs.length > 0 && <p className="mt-3 text-xs text-muted">Tick documents to offer them as context in the workspace. The backend decides whether they are used.</p>}
 
       {confirm && (
