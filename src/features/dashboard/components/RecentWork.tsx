@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ArrowUpRight, MessagesSquare, Trash2 } from 'lucide-react'
 import type { Failure } from '../api/failures'
 import type { Conversation } from '../api/types'
-import type { Load } from '../hooks/useWorkspace'
+import type { Load } from '../hooks/load'
 import { formatDay } from '../data/formatDate'
 import { ErrorNotice, Panel, Skeleton } from './StateViews'
 

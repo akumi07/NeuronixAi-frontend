@@ -46,7 +46,7 @@ function resultPath(n: Node) {
  * and into a consolidated result. It cycles through the illustrative examples and is
  * explicitly labelled as not being a live execution.
  */
-export function AgentOrchestrationVisual() {
+export function AgentOrchestrationVisual({ compact = false }: { compact?: boolean }) {
   const [index, setIndex] = useState(0)
   const [paused, setPaused] = useState(false)
   const [reduced, setReduced] = useState(false)
@@ -94,7 +94,7 @@ export function AgentOrchestrationVisual() {
       </figcaption>
 
       {/* Desktop / tablet map */}
-      <div ref={wrapRef} className="hidden min-[560px]:block" style={{ height: STAGE_H * scale }} aria-hidden="true">
+      <div ref={wrapRef} className={compact ? 'hidden' : 'hidden min-[560px]:block'} style={{ height: STAGE_H * scale }} aria-hidden="true">
         <div className="relative origin-top-left" style={{ width: STAGE_W, height: STAGE_H, transform: `scale(${scale})` }}>
           <svg className="absolute inset-0" width={STAGE_W} height={STAGE_H} viewBox={`0 0 ${STAGE_W} ${STAGE_H}`} fill="none">
             <path d={`M300,76 L300,${ROUTER.y}`} stroke="#7047EB" strokeWidth="2" className="flow-line" />
@@ -173,7 +173,7 @@ export function AgentOrchestrationVisual() {
       </div>
 
       {/* Small-screen stacked version */}
-      <div className="min-[560px]:hidden" aria-hidden="true">
+      <div className={compact ? '' : 'min-[560px]:hidden'} aria-hidden="true">
         <div className="rounded-2xl border border-line bg-white p-4 shadow-soft">
           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">Example goal</p>
           <p className="mt-1 text-sm font-semibold">{scenario.request}</p>

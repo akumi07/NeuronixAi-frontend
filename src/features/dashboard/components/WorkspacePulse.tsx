@@ -1,5 +1,5 @@
 import type { Conversation, CurrentUser } from '../api/types'
-import type { Load } from '../hooks/useWorkspace'
+import type { Load } from '../hooks/load'
 import { formatDay } from '../data/formatDate'
 import { ErrorNotice, Skeleton } from './StateViews'
 
