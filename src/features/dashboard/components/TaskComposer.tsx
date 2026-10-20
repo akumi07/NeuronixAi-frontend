@@ -1,6 +1,7 @@
 import type { RefObject } from 'react'
-import { ArrowUp, Loader2, Mic, Square } from 'lucide-react'
-import { useSpeechInput } from '../../../lib/useSpeechInput'
+import { ArrowUp, Loader2 } from 'lucide-react'
+import { useVoiceInput } from '../../../lib/useVoiceInput'
+import { VoiceButton, VoiceStatus } from './VoiceControls'
 import type { Failure } from '../api/failures'
 import { ErrorNotice } from './StateViews'
 
@@ -19,7 +20,7 @@ interface Props {
 
 export function TaskComposer({ value, onChange, onSubmit, sending, failure, textareaRef, placeholder, submitLabel = 'Start task' }: Props) {
   const canSend = value.trim().length > 0 && !sending
-  const voice = useSpeechInput({ onText: onChange, maxLength: MAX_MESSAGE_LENGTH })
+  const voice = useVoiceInput({ onText: onChange, maxLength: MAX_MESSAGE_LENGTH, currentText: value })
 
   return (
     <form
@@ -53,19 +54,7 @@ export function TaskComposer({ value, onChange, onSubmit, sending, failure, text
           {value.length > MAX_MESSAGE_LENGTH - 400 && <span className="ml-2">{value.length}/{MAX_MESSAGE_LENGTH}</span>}
         </p>
         <div className="flex items-center gap-2">
-        {voice.supported && (
-          <button
-            type="button"
-            disabled={sending}
-            onClick={voice.listening ? voice.stop : () => voice.start(value)}
-            aria-pressed={voice.listening}
-            aria-label={voice.listening ? 'Stop voice input' : 'Start voice input'}
-            className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition disabled:opacity-50 ${voice.listening ? 'border-coral bg-coral/10 text-[#B8321F]' : 'border-line text-muted hover:border-violet/40 hover:text-violet'}`}
-          >
-            {voice.listening ? <Square size={14} aria-hidden="true" /> : <Mic size={16} aria-hidden="true" />}
-            {voice.listening ? 'Listening… stop' : 'Voice'}
-          </button>
-        )}
+        <VoiceButton voice={voice} disabled={sending} />
         <button
           type="submit"
           disabled={!canSend}
@@ -77,15 +66,7 @@ export function TaskComposer({ value, onChange, onSubmit, sending, failure, text
         </button>
         </div>
       </div>
-      {voice.listening && (
-        <p role="status" className="px-4 pb-2 text-xs text-muted">
-          <span className="mr-2 inline-block size-2 animate-pulse rounded-full bg-coral align-middle" aria-hidden="true" />
-          Listening. Your words appear above and you can edit them before sending. Voice typing uses your browser’s speech service, which may send audio to its provider.
-        </p>
-      )}
-      {voice.error && (
-        <p role="alert" className="px-4 pb-2 text-xs text-[#9E2B1B]">{voice.error}</p>
-      )}
+      <VoiceStatus voice={voice} />
       {failure && (
         <div className="px-2 pb-2">
           <ErrorNotice failure={failure} />

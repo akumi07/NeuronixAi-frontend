@@ -13,11 +13,13 @@ function cspPlugin(apiOrigin: string): Plugin {
     transformIndexHtml(html) {
       const csp = [
         "default-src 'self'",
-        "script-src 'self'",
+        "script-src 'self' 'wasm-unsafe-eval'", // WebAssembly for on-device speech; the runtime is self-hosted
         "style-src 'self' 'unsafe-inline'", // components set inline style attributes
         "img-src 'self' data:",
         "font-src 'self'",
-        `connect-src 'self'${apiOrigin ? ` ${apiOrigin}` : ''}`,
+        // huggingface.co (+ its CDN hosts) is contacted only to download the optional on-device speech model weights
+        `connect-src 'self' https://huggingface.co https://*.huggingface.co https://*.hf.co${apiOrigin ? ` ${apiOrigin}` : ''}`,
+        "worker-src 'self'",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'",
@@ -42,6 +44,7 @@ export default defineConfig(({ mode }) => {
         '/actuator': { target, changeOrigin: true },
       },
     },
+    worker: { format: 'es' as const },
     test: { environment: 'node', include: ['src/**/*.test.{ts,tsx}'] },
   }
 })

@@ -1,7 +1,7 @@
 # Security headers and deployment
 
 The frontend is static files plus calls to the Spring Boot API. A `<meta>` Content-Security-Policy is injected into **production builds only** (see `vite.config.ts`):
-`default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' [API origin]; object-src 'none'; base-uri 'self'; form-action 'self'`.
+`default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://huggingface.co https://*.huggingface.co https://*.hf.co [API origin]; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'` (the Hugging Face hosts and `wasm-unsafe-eval` exist only for optional on-device voice; remove them if that feature is removed).
 No CSP violations were observed in a full browser pass over every screen against `vite preview`.
 
 A meta CSP cannot express `frame-ancestors`, and headers are better set by the server. Set these on the host serving the static files (nginx/CloudFront/etc.):

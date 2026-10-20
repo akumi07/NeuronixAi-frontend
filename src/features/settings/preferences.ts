@@ -7,9 +7,11 @@ import { useSyncExternalStore } from 'react'
 export interface Preferences {
   motion: 'system' | 'reduce'
   textSize: 'default' | 'large'
+  /** The user agreed to download the on-device speech model (the model itself is cached by the browser). */
+  onDeviceVoice: boolean
 }
 
-export const DEFAULT_PREFERENCES: Preferences = { motion: 'system', textSize: 'default' }
+export const DEFAULT_PREFERENCES: Preferences = { motion: 'system', textSize: 'default', onDeviceVoice: false }
 const KEY = 'neuronix.ui-preferences'
 
 /** Accepts only known values, so tampered storage can't inject arbitrary data. */
@@ -18,6 +20,7 @@ export function sanitizePreferences(raw: unknown): Preferences {
   return {
     motion: o.motion === 'reduce' ? 'reduce' : 'system',
     textSize: o.textSize === 'large' ? 'large' : 'default',
+    onDeviceVoice: o.onDeviceVoice === true,
   }
 }
 

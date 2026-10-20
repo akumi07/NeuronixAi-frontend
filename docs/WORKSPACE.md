@@ -47,9 +47,19 @@ Verified in `akumi07/NeuronixAI` (`ChatController`, `ChatService`, `LlmClient`/`
 8. New-task runs remount after the conversation id is assigned, so the "Response received in Ns" detail is not retained for the first turn.
 
 ## Voice input (composer)
-A **Voice** button appears in the task composer (workspace and dashboard) when the browser supports the Web Speech API (Chrome, Edge, Safari; not Firefox).
-Speech is transcribed into the editable text box (interim words appear live); nothing is sent until the user presses send, and the text can be edited first.
-- Recognition is done by the **browser vendor's speech service** (in Chrome, audio is sent to Google). The UI says so while listening. NeuronixAI's backend never receives audio and the app stores none.
-- Microphone permission is requested by the browser on first use; denial, no microphone, no speech, and network failures show clear messages.
-- Send stops listening. The transcript is treated as plain text like any typed message. Server header `Permissions-Policy` must allow `microphone=(self)` (see docs/SECURITY_HEADERS.md).
-- Not offered: audio file upload, server-side transcription, or speech output (the backend has no such endpoints).
+A **Voice** button in the task composer (workspace and dashboard) turns speech into text in the editable box. Nothing is sent to NeuronixAI until the user presses send; the backend never receives audio.
+
+Two engines, chosen automatically so it works in any modern browser:
+1. **Browser speech service** (Chrome, Edge, Safari): live transcription. The browser vendor's service hears the audio (in Chrome, Google), which the UI states while listening.
+2. **On-device Whisper** (Brave, Firefox, or when the browser's service is blocked/unreachable): after a one-time consent prompt, a small quantized Whisper model (`Xenova/whisper-tiny`, ~40 MB) is downloaded from huggingface.co and cached by the browser. Audio is recorded locally, decoded to 16 kHz PCM, transcribed in a Web Worker with WebAssembly, and discarded. Max recording 60 s. Not live: text appears after Stop.
+   - The ONNX runtime (JS + WASM) is **self-hosted** (bundled), not loaded from a CDN. Only the model weights are fetched from Hugging Face.
+   - Consent is remembered in the non-sensitive UI preference `onDeviceVoice`.
+
+Errors handled with clear copy: microphone blocked/missing, no speech, speech service unreachable (offers the on-device fallback), model download failed, transcription failed.
+
+### Security and dependency notes
+- CSP (production build) adds `script-src 'wasm-unsafe-eval'`, `worker-src 'self'`, and `connect-src https://huggingface.co https://*.huggingface.co https://*.hf.co` (model download only). `Permissions-Policy` must allow `microphone=(self)`.
+- Model weights are third-party data fetched at runtime from the `main` revision; pin a reviewed commit hash (`revision` option in `whisperWorker.ts`) before production.
+- New dependency `@huggingface/transformers` (+ `onnxruntime-web`, a pre-release snapshot) loads only in the worker chunk (~0.5 MB JS + 14 MB WASM on first use). It also pulls `onnxruntime-node` (~290 MB in `node_modules`, unused in the browser; its install script downloads binaries, so installs need GitHub access). The build emits an extra unused `asyncify` WASM file (~27 MB) into `dist/assets` that is never requested.
+- **Verification limits:** in the development sandbox Hugging Face was blocked, so model download and real transcription accuracy were NOT tested. Verified: consent flow, recording with a fake microphone, decoding, worker hand-off, the CSP, error handling for a failed download, and that no CDN is contacted for the runtime.
+- Not offered: server-side transcription, audio file upload, speech output.
