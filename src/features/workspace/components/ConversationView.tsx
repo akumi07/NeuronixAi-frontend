@@ -16,6 +16,9 @@ interface Props {
   onRetrySend: () => void
   onCancel: () => void
   onNewTask: () => void
+  /** True while the backend reports an active execution for this conversation. */
+  executionActive?: boolean
+  onCancelExecution?: () => void
 }
 
 function UserBubble({ children }: { children: string }) {
@@ -58,7 +61,7 @@ function ResultCard({ content }: { content: string }) {
   )
 }
 
-export function ConversationView({ thread, pending, phase, failure, hasFailedMessage, onRetryThread, onRetrySend, onCancel, onNewTask }: Props) {
+export function ConversationView({ thread, pending, phase, failure, hasFailedMessage, onRetryThread, onRetrySend, onCancel, onNewTask, executionActive, onCancelExecution }: Props) {
   const messages = thread.status === 'ready' ? thread.data : []
   const lastAssistant = (() => {
     for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === 'ASSISTANT') return messages[i].id
@@ -104,6 +107,14 @@ export function ConversationView({ thread, pending, phase, failure, hasFailedMes
           <button type="button" onClick={onCancel} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 font-semibold hover:border-coral/50 hover:text-coral">
             <Square size={12} aria-hidden="true" /> Stop waiting
           </button>
+        </div>
+      )}
+
+      {phase === 'running' && executionActive && (
+        <div role="status" className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white p-4 text-sm">
+          <Loader2 size={16} className="animate-spin text-violet" aria-hidden="true" />
+          <span className="flex-1 text-muted">The backend is working on this task. Progress appears in Task details when it reports it.</span>
+          {onCancelExecution && <button type="button" onClick={onCancelExecution} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 font-semibold hover:border-coral/50 hover:text-coral"><Square size={12} aria-hidden="true" /> Cancel execution</button>}
         </div>
       )}
 

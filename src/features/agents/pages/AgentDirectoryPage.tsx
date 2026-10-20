@@ -103,7 +103,7 @@ export default function AgentDirectoryPage() {
                     <p className="sr-only">{tagline}</p>
                   </div>
                   <div className="relative flex items-center justify-between gap-3 sm:flex-col sm:items-end sm:gap-6">
-                    <StatusPill availability={availability} />
+                    <span className="flex flex-wrap items-center gap-2"><span className="rounded-full border border-dashed border-muted/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">Informational</span><StatusPill availability={availability} /></span>
                     <span className="inline-flex items-center gap-1 text-sm font-semibold text-violet">Details <ArrowUpRight size={16} aria-hidden="true" className="transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></span>
                   </div>
                 </Link>

@@ -29,6 +29,7 @@ export function RunPipeline({ phase, hasConversation, durationMs }: Props) {
 
   const result: { tone: Tone; text: string } =
     phase === 'sending' ? { tone: 'active', text: 'Waiting for the response…' }
+    : phase === 'running' ? { tone: 'active', text: 'The backend is still working on it…' }
     : phase === 'received' ? { tone: 'done', text: `Response received${durationMs ? ` in ${(durationMs / 1000).toFixed(1)}s (measured here)` : ''}` }
     : phase === 'failed' ? { tone: 'error', text: 'Request failed' }
     : phase === 'cancelled' ? { tone: 'error', text: 'You stopped waiting' }

@@ -4,7 +4,8 @@ import { STARTERS } from '../data/capabilityStarters'
 export function CapabilityStarters({ onPick }: { onPick: (prompt: string) => void }) {
   return (
     <div>
-      <p className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-muted">Start with a prompt</p>
+      <p className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-muted">Start with a prompt</p>
+      <p className="mb-3 text-xs text-muted">These only fill the box. They don’t choose an agent: how your request is handled is decided by the backend.</p>
       <ul className="flex flex-wrap gap-2.5">
         {AGENTS.map((a) => {
           const Icon = a.icon

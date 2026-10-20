@@ -6,6 +6,7 @@ import { MAX_FILE_BYTES, formatBytes } from '../lib/validateFile'
 
 interface Props {
   uploading: string | null
+  progress: number | null
   invalid: string | null
   failure: Failure | null
   possibleDuplicate: File | null
@@ -14,7 +15,7 @@ interface Props {
   onDismissDuplicate: () => void
 }
 
-export function UploadPanel({ uploading, invalid, failure, possibleDuplicate, onChoose, onConfirmDuplicate, onDismissDuplicate }: Props) {
+export function UploadPanel({ uploading, progress, invalid, failure, possibleDuplicate, onChoose, onConfirmDuplicate, onDismissDuplicate }: Props) {
   const input = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
   const busy = uploading !== null
@@ -38,6 +39,12 @@ export function UploadPanel({ uploading, invalid, failure, possibleDuplicate, on
           {busy ? <Loader2 size={22} className="animate-spin" aria-hidden="true" /> : <FileUp size={22} aria-hidden="true" />}
         </span>
         <p className="mt-3 font-semibold">{busy ? `Uploading ${uploading}…` : 'Drag a PDF here, or'}</p>
+        {busy && progress !== null && (
+          <div className="mx-auto mt-3 max-w-xs" role="progressbar" aria-label="Upload progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
+            <div className="h-2 overflow-hidden rounded-full bg-line"><div className="h-full rounded-full bg-gradient-to-r from-violet to-blue transition-[width]" style={{ width: `${Math.round(progress * 100)}%` }} /></div>
+            <p className="mt-1 text-xs text-muted">{progress >= 1 ? 'Sent. Waiting for the server to confirm…' : `${Math.round(progress * 100)}% sent`}</p>
+          </div>
+        )}
         <label className={`mt-3 inline-block cursor-pointer rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold shadow-sm hover:border-violet/40 hover:text-violet focus-within:ring-4 focus-within:ring-violet/15 ${busy ? 'pointer-events-none opacity-60' : ''}`}>
           Choose file
           <input ref={input} type="file" accept=".pdf,application/pdf" disabled={busy} onChange={(e) => pick(e.target.files)} className="sr-only" />
