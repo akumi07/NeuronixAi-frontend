@@ -13,9 +13,10 @@ interface Props {
   failure: Failure | null
   textareaRef: RefObject<HTMLTextAreaElement | null>
   placeholder?: string
+  submitLabel?: string
 }
 
-export function TaskComposer({ value, onChange, onSubmit, sending, failure, textareaRef, placeholder }: Props) {
+export function TaskComposer({ value, onChange, onSubmit, sending, failure, textareaRef, placeholder, submitLabel = 'Start task' }: Props) {
   const canSend = value.trim().length > 0 && !sending
 
   return (
@@ -56,7 +57,7 @@ export function TaskComposer({ value, onChange, onSubmit, sending, failure, text
           className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-violet to-indigo px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_-8px_rgb(112_71_235/0.7)] transition enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {sending ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <ArrowUp size={16} aria-hidden="true" />}
-          {sending ? 'Working…' : 'Start task'}
+          {sending ? 'Working…' : submitLabel}
         </button>
       </div>
       {failure && (

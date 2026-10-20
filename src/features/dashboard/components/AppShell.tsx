@@ -1,18 +1,21 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Globe, LayoutDashboard, Menu, Plus, X } from 'lucide-react'
+import { Globe, LayoutDashboard, Menu, Plus, Sparkles, X } from 'lucide-react'
 import { BrandLogo } from '../../landing/components/BrandLogo'
 import { AccountMenu } from './AccountMenu'
 
 interface Props {
   email: string
   onLogout: () => Promise<void>
-  onNewTask: () => void
+  active: 'dashboard' | 'workspace'
+  /** Extra sidebar content (e.g. task history), rendered between navigation and the account menu. */
+  sidebarExtra?: (closeMenu: () => void) => ReactNode
+  wide?: boolean
   children: ReactNode
 }
 
 /** Application shell. Only sections that exist are linked: the dashboard and the public website. */
-export function AppShell({ email, onLogout, onNewTask, children }: Props) {
+export function AppShell({ email, onLogout, active, sidebarExtra, wide, children }: Props) {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -25,20 +28,25 @@ export function AppShell({ email, onLogout, onNewTask, children }: Props) {
   const sidebar = (
     <div className="flex h-full flex-col gap-6 p-5">
       <Link to="/app" aria-label="NeuronixAI dashboard"><BrandLogo /></Link>
-      <button
-        type="button"
-        onClick={() => { setOpen(false); onNewTask() }}
+      <Link
+        to="/app/workspace"
+        onClick={() => setOpen(false)}
         className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-violet to-indigo px-4 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_-10px_rgb(112_71_235/0.7)] hover:-translate-y-0.5"
       >
         <Plus size={18} aria-hidden="true" /> New task
-      </button>
-      <nav aria-label="Application" className="flex-1">
+      </Link>
+      <nav aria-label="Application">
         <ul className="space-y-1">
-          <li>
-            <Link to="/app" aria-current="page" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl bg-violet/10 px-3 py-2.5 text-sm font-semibold text-violet">
-              <LayoutDashboard size={18} aria-hidden="true" /> Dashboard
-            </Link>
-          </li>
+          {[
+            { id: 'dashboard', to: '/app', label: 'Dashboard', Icon: LayoutDashboard },
+            { id: 'workspace', to: '/app/workspace', label: 'Workspace', Icon: Sparkles },
+          ].map(({ id, to, label, Icon }) => (
+            <li key={id}>
+              <Link to={to} aria-current={active === id ? 'page' : undefined} onClick={() => setOpen(false)} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${active === id ? 'bg-violet/10 font-semibold text-violet' : 'font-medium text-muted hover:bg-canvas hover:text-ink'}`}>
+                <Icon size={18} aria-hidden="true" /> {label}
+              </Link>
+            </li>
+          ))}
           <li>
             <Link to="/" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted hover:bg-canvas hover:text-ink">
               <Globe size={18} aria-hidden="true" /> Website
@@ -46,6 +54,7 @@ export function AppShell({ email, onLogout, onNewTask, children }: Props) {
           </li>
         </ul>
       </nav>
+      <div className="min-h-0 flex-1 overflow-y-auto">{sidebarExtra?.(() => setOpen(false))}</div>
       <AccountMenu email={email} onLogout={onLogout} />
     </div>
   )
@@ -73,7 +82,7 @@ export function AppShell({ email, onLogout, onNewTask, children }: Props) {
 
       <div className="relative min-w-0">
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(50%_80%_at_75%_0%,rgb(112_71_235/0.10),transparent),radial-gradient(35%_60%_at_100%_30%,rgb(32_201_215/0.10),transparent)]" />
-        <main id="dashboard-main" className="relative mx-auto max-w-5xl px-4 py-8 sm:px-8 lg:py-12">{children}</main>
+        <main id="dashboard-main" className={`relative mx-auto px-4 py-6 sm:px-8 lg:py-10 ${wide ? 'max-w-7xl' : 'max-w-5xl'}`}>{children}</main>
       </div>
     </div>
   )
