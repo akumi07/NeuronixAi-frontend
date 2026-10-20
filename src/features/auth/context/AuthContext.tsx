@@ -39,6 +39,8 @@ interface AuthContextValue {
   discardResetSession: () => void
 }
 
+const SESSION_PROBE_PATH = '/api/v1/users/me'
+
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -71,17 +73,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [session])
 
+  /**
+   * A 401 does not always mean the session ended: with Spring Security's secured /error dispatch, ordinary
+   * server-side failures (e.g. a rejected or oversized upload, a storage error) can surface as 401. So on a 401
+   * we ask the backend whether the token is still accepted (GET /users/me) and only sign out if it is not.
+   */
   const authedRequest = useCallback<AuthedRequest>(
     async (method, path, options) => {
       if (!session) throw new ApiError('http', 401)
+      const is401 = (e: unknown) => e instanceof ApiError && e.kind === 'http' && e.status === 401
+      const endSession = () => { setSession(null); setSessionExpired(true) }
       try {
         return await apiRequest(method, path, { ...options, bearer: session.token })
       } catch (e) {
-        if (e instanceof ApiError && e.kind === 'http' && e.status === 401) {
-          setSession(null)
-          setSessionExpired(true)
+        if (!is401(e)) throw e
+        if (path === SESSION_PROBE_PATH) { endSession(); throw e }
+        try {
+          await apiRequest('GET', SESSION_PROBE_PATH, { bearer: session.token })
+        } catch (probeError) {
+          if (is401(probeError)) { endSession(); throw e }
+          throw new ApiError('http', 500) // couldn't verify the session; don't sign out on a guess
         }
-        throw e
+        throw new ApiError('http', 500) // token is still valid: the 401 masked a server-side failure
       }
     },
     [session],
