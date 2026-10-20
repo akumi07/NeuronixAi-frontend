@@ -11,7 +11,7 @@ Content-Security-Policy: (same policy as above) + frame-ancestors 'none'
 Strict-Transport-Security: max-age=31536000; includeSubDomains
 X-Content-Type-Options: nosniff
 Referrer-Policy: no-referrer
-Permissions-Policy: camera=(), microphone=(), geolocation=()
+Permissions-Policy: camera=(), microphone=(self), geolocation=()   (microphone is needed for voice input in the chat composer)
 Cache-Control: no-store   (for index.html; hashed /assets/* may be cached)
 ```
 - Serve the app and the API from the **same origin** (reverse proxy `/api` and `/actuator/health`). The backend has no CORS configuration; if a separate origin is required, add CORS server-side (explicit origin allow-list, `Authorization` header, no credentials) and set `VITE_API_BASE_URL` (non-secret) so the CSP `connect-src` is generated.
