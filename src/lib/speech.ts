@@ -23,12 +23,16 @@ export function getSpeechRecognition(): SpeechRecognitionCtor | null {
 }
 
 /** Joins the text that was already in the box with the (final + interim) transcript, without doubling spaces. */
+export function appendSpoken(baseline: string, spokenText: string, maxLength: number): string {
+  const spoken = spokenText.replace(/\s+/g, ' ').trim()
+  const sep = baseline && !/\s$/.test(baseline) && spoken ? ' ' : ''
+  return (baseline + sep + spoken).slice(0, maxLength)
+}
+
 export function assembleTranscript(baseline: string, results: SpeechResultListLike, maxLength: number): string {
   let spoken = ''
   for (let i = 0; i < results.length; i++) spoken += results[i][0].transcript
-  spoken = spoken.replace(/\s+/g, ' ').trim()
-  const sep = baseline && !/\s$/.test(baseline) && spoken ? ' ' : ''
-  return (baseline + sep + spoken).slice(0, maxLength)
+  return appendSpoken(baseline, spoken, maxLength)
 }
 
 export function describeSpeechError(code: string): string {

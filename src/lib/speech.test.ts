@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assembleTranscript, describeSpeechError, type SpeechResultListLike } from './speech'
+import { appendSpoken, assembleTranscript, describeSpeechError, type SpeechResultListLike } from './speech'
 
 const results = (...t: string[]): SpeechResultListLike => Object.assign(t.map((transcript) => ({ isFinal: true, 0: { transcript } })), {})
 
@@ -18,4 +18,9 @@ describe('describeSpeechError', () => {
     expect(describeSpeechError('audio-capture')).toMatch(/microphone/i)
   })
   it('has a safe default', () => expect(describeSpeechError('whatever')).toMatch(/stopped/i))
+})
+
+describe('appendSpoken', () => {
+  it('appends on-device transcripts like live ones', () => expect(appendSpoken('Please', ' help me ', 100)).toBe('Please help me'))
+  it('ignores empty transcripts', () => expect(appendSpoken('Hi', '   ', 100)).toBe('Hi'))
 })
