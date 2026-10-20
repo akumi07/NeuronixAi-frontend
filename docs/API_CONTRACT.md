@@ -50,7 +50,7 @@ The legacy `forget-password` → `new-password` reset (which hands out a normal 
 - `POST /api/v1/documents/{id}/process` → document (status `PROCESSING`…)
 - `POST /api/v1/documents/{id}/ask` `{question, topK?}` → `{answer, sources?:[{chunkIndex?,content?,similarity?}]}`
 - Status vocabulary: `UPLOADED`, `PROCESSING`/`EXTRACTING`/`CHUNKING`/`EMBEDDING`/`QUEUED`, ready = `INDEXED`/`READY`/`EMBEDDED`, `FAILED`/`ERROR`. A document is shown as "Ready for retrieval" only for the ready set; the current backend only ever returns `UPLOADED`.
-- Dev-only test routes (flag): `POST /api/v1/documents/test/{id}/chunk`, `POST /api/v1/rag/test/documents/{id}/embeddings`, `GET /api/v1/rag/test/documents/{id}/ask?question=&topK=`. They have no ownership checks; do not expose them in production.
+- Test routes (used by the Knowledge screen while production endpoints don't exist; ON by default in dev builds, OFF in production unless `VITE_ENABLE_RAG_TEST_ENDPOINTS=true`): `POST /api/v1/documents/test/{id}/chunk`, `POST /api/v1/rag/test/documents/{id}/embeddings`, `GET /api/v1/rag/test/documents/{id}/ask?question=&topK=`. They have no ownership checks; do not expose them in production.
 
 ## Error handling (`src/api/errors.ts`, `src/api/normalize.ts`)
 Suggested standard body (a proposal, not an existing backend behaviour): `{timestamp,status,error,code,message,path}`. The client keeps only `code` (matching `^[A-Z][A-Z0-9_]{2,63}$`) and discards prose.
@@ -70,4 +70,4 @@ Confirmed-unavailable features are remembered for the tab so unsupported request
 > Why 401 can mean "missing route": Spring Security secures the `/error` dispatch, so missing routes and server errors surface as 401. Fix on the backend with `.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()` and real exception handlers; the frontend does not rely on it.
 
 ## Configuration
-`src/api/config.ts`: `VITE_API_BASE_URL` (origin only, default same-origin), `VITE_DEV_API_TARGET` (dev proxy), `VITE_ENABLE_RAG_TEST_ENDPOINTS` (dev only). See `.env.example`.
+`src/api/config.ts`: `VITE_API_BASE_URL` (origin only, default same-origin), `VITE_DEV_API_TARGET` (dev proxy), `VITE_ENABLE_RAG_TEST_ENDPOINTS` (default on in dev, off in production). See `.env.example`.

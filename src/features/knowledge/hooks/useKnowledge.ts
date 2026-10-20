@@ -131,7 +131,7 @@ export function useKnowledge(email: string) {
     setProc(id, { running: true, failure: null, note: null })
     try {
       let handled = false
-      if (!isMarkedUnavailable('documentProcess')) {
+      if (!ENABLE_RAG_TEST_ENDPOINTS && !isMarkedUnavailable('documentProcess')) {
         try {
           const rec = await api.process(id)
           handled = true
@@ -159,6 +159,16 @@ export function useKnowledge(email: string) {
     }
   }, [api, process, refreshList])
 
+  // ---- add an existing document by id (test-endpoint mode only: the backend has no list endpoint) ----
+  const addExistingDocument = useCallback((rawId: string): string | null => {
+    const id = rawId.trim()
+    if (!/^\d{1,15}$/.test(id)) return 'Enter a numeric document ID.'
+    if (base.some((d) => d.id === id)) return 'That document is already in the list.'
+    const now = new Date().toISOString().slice(0, 19)
+    setSessionDocs((d) => [{ id, fileName: `Document #${id} (added by ID)`, fileType: '', fileSize: 0, status: 'UNVERIFIED', createdAt: now, updatedAt: now }, ...d])
+    return null
+  }, [base])
+
   // ---- delete ----
   const deleteDocument = useCallback(async (id: string): Promise<boolean> => {
     setDeleteFailure(null)
@@ -180,7 +190,7 @@ export function useKnowledge(email: string) {
     const controller = new AbortController()
     inflight.current = controller
     try {
-      if (!isMarkedUnavailable('documentQa')) {
+      if (!ENABLE_RAG_TEST_ENDPOINTS && !isMarkedUnavailable('documentQa')) {
         try {
           const r = await api.ask(id, question, topK, controller.signal)
           setAsk({ phase: 'ready', answer: r.answer, sources: r.sources, source: 'production', question })
@@ -204,7 +214,7 @@ export function useKnowledge(email: string) {
     uploading, progress, invalid, uploadFailure, possibleDuplicate, choose, confirmDuplicate, dismissDuplicate: () => setPossibleDuplicate(null),
     selected, toggleSelected,
     process, processDocument,
-    deleteDocument, deleteFailure,
+    deleteDocument, deleteFailure, addExistingDocument,
     ask, askDocument, resetAsk: () => setAsk({ phase: 'idle' }),
   }
 }
