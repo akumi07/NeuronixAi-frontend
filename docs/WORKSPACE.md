@@ -45,3 +45,11 @@ Verified in `akumi07/NeuronixAI` (`ChatController`, `ChatService`, `LlmClient`/`
 6. Unhandled exceptions (`ConversationNotFoundException`, `IllegalArgumentException`) yield HTTP 500 rather than 404.
 7. Chat input has no server-side length limit/rate limit; the system prompt/safety handling is not visible to the client (and isn't exposed).
 8. New-task runs remount after the conversation id is assigned, so the "Response received in Ns" detail is not retained for the first turn.
+
+## Voice input (composer)
+A **Voice** button appears in the task composer (workspace and dashboard) when the browser supports the Web Speech API (Chrome, Edge, Safari; not Firefox).
+Speech is transcribed into the editable text box (interim words appear live); nothing is sent until the user presses send, and the text can be edited first.
+- Recognition is done by the **browser vendor's speech service** (in Chrome, audio is sent to Google). The UI says so while listening. NeuronixAI's backend never receives audio and the app stores none.
+- Microphone permission is requested by the browser on first use; denial, no microphone, no speech, and network failures show clear messages.
+- Send stops listening. The transcript is treated as plain text like any typed message. Server header `Permissions-Policy` must allow `microphone=(self)` (see docs/SECURITY_HEADERS.md).
+- Not offered: audio file upload, server-side transcription, or speech output (the backend has no such endpoints).
