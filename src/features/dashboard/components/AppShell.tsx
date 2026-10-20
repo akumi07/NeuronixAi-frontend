@@ -1,13 +1,14 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useFocusTrap } from '../../../lib/useFocusTrap'
 import { Link } from 'react-router-dom'
-import { Bot, Globe, History, Library, MessagesSquare, LayoutDashboard, Menu, Plus, Sparkles, X } from 'lucide-react'
+import { Bot, Globe, History, Library, MessagesSquare, Settings, LayoutDashboard, Menu, Plus, Sparkles, X } from 'lucide-react'
 import { BrandLogo } from '../../landing/components/BrandLogo'
 import { AccountMenu } from './AccountMenu'
 
 interface Props {
   email: string
   onLogout: () => Promise<void>
-  active: 'dashboard' | 'workspace' | 'tasks' | 'conversations' | 'agents' | 'knowledge'
+  active: 'dashboard' | 'workspace' | 'tasks' | 'conversations' | 'agents' | 'knowledge' | 'settings'
   /** Extra sidebar content (e.g. task history), rendered between navigation and the account menu. */
   sidebarExtra?: (closeMenu: () => void) => ReactNode
   wide?: boolean
@@ -17,6 +18,8 @@ interface Props {
 /** Application shell. Only sections that exist are linked: the dashboard and the public website. */
 export function AppShell({ email, onLogout, active, sidebarExtra, wide, children }: Props) {
   const [open, setOpen] = useState(false)
+  const drawerRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(drawerRef, open)
 
   useEffect(() => {
     if (!open) return
@@ -44,6 +47,7 @@ export function AppShell({ email, onLogout, active, sidebarExtra, wide, children
             { id: 'conversations', to: '/app/conversations', label: 'Conversations', Icon: MessagesSquare },
             { id: 'agents', to: '/app/agents', label: 'Agents', Icon: Bot },
             { id: 'knowledge', to: '/app/knowledge', label: 'Knowledge', Icon: Library },
+            { id: 'settings', to: '/app/settings', label: 'Settings', Icon: Settings },
           ].map(({ id, to, label, Icon }) => (
             <li key={id}>
               <Link to={to} aria-current={active === id ? 'page' : undefined} onClick={() => setOpen(false)} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${active === id ? 'bg-violet/10 font-semibold text-violet' : 'font-medium text-muted hover:bg-canvas hover:text-ink'}`}>
@@ -77,7 +81,7 @@ export function AppShell({ email, onLogout, active, sidebarExtra, wide, children
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <button type="button" aria-label="Close menu" className="absolute inset-0 bg-ink/30" onClick={() => setOpen(false)} />
-          <div id="mobile-sidebar" role="dialog" aria-modal="true" aria-label="Menu" className="absolute inset-y-0 left-0 w-72 max-w-[85%] bg-white shadow-lift">
+          <div ref={drawerRef} id="mobile-sidebar" role="dialog" aria-modal="true" aria-label="Menu" className="absolute inset-y-0 left-0 w-72 max-w-[85%] bg-white shadow-lift">
             <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="absolute right-3 top-4 grid size-9 place-items-center rounded-lg text-muted hover:text-ink"><X size={20} aria-hidden="true" /></button>
             {sidebar}
           </div>

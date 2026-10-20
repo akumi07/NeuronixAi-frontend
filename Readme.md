@@ -1,9 +1,17 @@
 # NeuronixAI Frontend
 
-Vite + React + TypeScript + Tailwind CSS v4. Landing page lives in `src/features/landing`.
+Vite + React + TypeScript + Tailwind CSS v4. Feature code is in `src/features/*`.
 
-- `npm run dev` — start dev server
-- `npm run build` — type-check and build
-- `npm run lint` — lint
+```
+npm install
+npm run dev      # dev server; proxies /api and /actuator to VITE_DEV_API_TARGET (default http://localhost:8080)
+npm run lint
+npm test
+npm run build
+```
 
-`/login` and `/register` are placeholder routes (no auth behavior) until those screens are built.
+Screens: landing, sign in / register / reset, dashboard, workspace, tasks, conversations, agents, knowledge base, settings.
+The session token is kept in memory only, so a page reload signs you out.
+
+Docs: `docs/AUTHENTICATION.md`, `DASHBOARD.md`, `WORKSPACE.md`, `AGENTS.md`, `TASKS.md`, `CONVERSATIONS_KNOWLEDGE.md`, `SECURITY_AUDIT.md`, `SECURITY_HEADERS.md`.
+Configuration (non-secret only) is described in `.env.example`.

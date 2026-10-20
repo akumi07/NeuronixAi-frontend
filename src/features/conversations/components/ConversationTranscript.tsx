@@ -73,7 +73,7 @@ export function ConversationTranscript({ conversation, onDelete }: Props) {
                 return (
                   <li key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                     <div className={`min-w-0 max-w-[95%] rounded-2xl px-4 py-3 sm:max-w-[85%] ${mine ? 'rounded-br-md bg-violet text-white' : 'rounded-bl-md border border-line bg-white shadow-sm'}`}>
-                      <p className={`mb-1 flex items-center justify-between gap-4 text-[11px] font-bold uppercase tracking-[0.12em] ${mine ? 'text-white/70' : 'text-muted'}`}>
+                      <p className={`mb-1 flex items-center justify-between gap-4 text-[11px] font-bold uppercase tracking-[0.12em] ${mine ? 'text-white/90' : 'text-muted'}`}>
                         <span>{mine ? 'You' : 'NeuronixAI'}{formatDay(m.createdAt) && ` · ${formatDay(m.createdAt)}`}</span>
                         {!mine && <CopyButton text={m.content} />}
                       </p>

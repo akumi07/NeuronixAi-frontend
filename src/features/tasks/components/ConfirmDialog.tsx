@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Loader2 } from 'lucide-react'
+import { useFocusTrap } from '../../../lib/useFocusTrap'
 
 interface Props {
   title: string
@@ -13,6 +14,8 @@ interface Props {
 /** Modal confirmation for destructive actions. Focus starts on the safe option; Escape cancels. */
 export function ConfirmDialog({ title, body, confirmLabel, busy, onConfirm, onCancel }: Props) {
   const cancelRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(dialogRef, true)
   useEffect(() => {
     cancelRef.current?.focus()
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !busy) onCancel() }
@@ -23,7 +26,7 @@ export function ConfirmDialog({ title, body, confirmLabel, busy, onConfirm, onCa
   return (
     <div className="fixed inset-0 z-50 grid place-items-center p-4">
       <div className="absolute inset-0 bg-ink/40" onClick={busy ? undefined : onCancel} aria-hidden="true" />
-      <div role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-body" className="relative w-full max-w-sm rounded-3xl bg-white p-6 shadow-lift">
+      <div ref={dialogRef} role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-body" className="relative w-full max-w-sm rounded-3xl bg-white p-6 shadow-lift">
         <h2 id="confirm-title" className="font-display text-xl font-bold">{title}</h2>
         <p id="confirm-body" className="mt-2 text-sm text-muted">{body}</p>
         <div className="mt-6 flex justify-end gap-2">
